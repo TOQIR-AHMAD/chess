@@ -59,7 +59,7 @@ export function PlayerStrip({
   const grouped = PIECE_ORDER.flatMap((piece) => captured.filter((entry) => entry === piece));
 
   return (
-    <div className={cn('flex h-10 min-w-0 items-center gap-2', className)}>
+    <div className={cn('flex h-9 min-w-0 items-center gap-2', className)}>
       <Avatar name={name} avatar={avatar} side={side} />
 
       <div className="min-w-0 flex-1">

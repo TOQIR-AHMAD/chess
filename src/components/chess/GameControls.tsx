@@ -19,7 +19,7 @@ export function GameControls({
   totalMoves: number;
   className?: string;
 }) {
-  const step = 'btn btn-subtle h-9 min-w-11 flex-1 p-0';
+  const step = 'btn btn-subtle h-8 min-w-11 flex-1 p-0';
 
   return (
     <div className={cn('flex flex-wrap items-stretch gap-1.5', className)}>
@@ -78,7 +78,7 @@ export function GameControls({
 
       <button
         type="button"
-        className="btn btn-ghost h-9 shrink-0 gap-1.5 px-2.5 text-xs"
+        className="btn btn-ghost h-8 shrink-0 gap-1.5 px-2.5 text-xs"
         onClick={nav.togglePlay}
         disabled={totalMoves === 0}
         title={nav.playing ? 'Pause (Space)' : 'Play (Space)'}
@@ -90,7 +90,7 @@ export function GameControls({
 
       <button
         type="button"
-        className="btn btn-ghost h-9 shrink-0 gap-1.5 px-2.5 text-xs"
+        className="btn btn-ghost h-8 shrink-0 gap-1.5 px-2.5 text-xs"
         onClick={nav.flip}
         title="Flip board (F)"
         aria-label="Flip board"

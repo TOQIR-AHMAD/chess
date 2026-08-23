@@ -82,11 +82,6 @@ export function GameReviewPanel({
         </div>
       )}
 
-      <p className="text-muted pt-3 text-[11px] leading-relaxed">
-        Accuracy is computed by this app from Stockfish evaluations at depth {review.engine.depth}{' '}
-        using a win-probability model, then combined with a volatility-weighted and harmonic mean. It
-        is not Chess.com's accuracy score and the two will differ.
-      </p>
     </div>
   );
 }

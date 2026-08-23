@@ -45,8 +45,8 @@ import { playerPath } from '@/utils/routes';
 const EVAL_COLUMN_OFFSET = 'pl-[28px]';
 const EVAL_COLUMN_WIDTH = 28;
 
-/** A name plate is `h-10`; the board has to leave room for the one above and below. */
-const STRIP_HEIGHT = 40;
+/** A name plate is `h-9`; the board has to leave room for the one above and below. */
+const STRIP_HEIGHT = 36;
 
 /** Below this the board stops shrinking and the stage scrolls instead. */
 const MIN_BOARD_SIZE = 220;
@@ -413,7 +413,12 @@ export function GameAnalysisPage() {
         reading order a phone wants: board, controls, evaluation, moves, analysis.
         From `lg` up the wrappers become real columns again and order is ignored.
       */}
-      <div className="flex flex-col gap-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch xl:grid-cols-[minmax(0,1fr)_400px]">
+      {/*
+        The board is bounded by the viewport's height, not by this column, so on a
+        wide screen there is width it cannot use. The rail takes it: it grows with
+        the viewport between 360px and 520px instead of leaving bare slate.
+      */}
+      <div className="flex flex-col gap-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch xl:grid-cols-[minmax(0,1fr)_clamp(360px,24vw,520px)]">
         {/* ---------------- Board column ---------------- */}
         <div className="contents lg:flex lg:min-h-0 lg:w-full lg:min-w-0 lg:flex-col lg:gap-2">
           {/*
@@ -491,7 +496,7 @@ export function GameAnalysisPage() {
           )}
 
           <Panel flush className="order-3 shrink-0">
-            <div className="px-3 py-2">
+            <div className="px-2 py-1.5">
               <GameControls nav={nav} totalMoves={parsed.moves.length} />
             </div>
           </Panel>

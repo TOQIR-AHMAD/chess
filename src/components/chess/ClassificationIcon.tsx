@@ -13,12 +13,33 @@ const GLYPH: Record<MoveClassification, string> = {
   best: '\u2605',
   excellent: '\u2713',
   good: '\u2713',
-  book: '\u265E',
+  // Opening theory is drawn, not typed \u2014 see `BookGlyph` below.
+  book: '',
   inaccuracy: '?!',
   mistake: '?',
   blunder: '??',
   missed: '\u2715',
 };
+
+/** An open book: the one classification no single character says clearly. */
+function BookGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="66%"
+      height="66%"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3.5 5.5A1.5 1.5 0 0 1 5 4h4.2A2.8 2.8 0 0 1 12 5.9 2.8 2.8 0 0 1 14.8 4H19a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 19 18h-4.2a2.8 2.8 0 0 0-2.8 1.9A2.8 2.8 0 0 0 9.2 18H5a1.5 1.5 0 0 1-1.5-1.5z" />
+      <path d="M12 6v13.9" />
+    </svg>
+  );
+}
 
 /** Solid fills, so the badge stays legible on a board square. */
 const TONE: Record<MoveClassification, string> = {
@@ -65,7 +86,7 @@ export function ClassificationIcon({
       title={title ?? `${meta.label} — ${meta.description}`}
       aria-label={meta.label}
     >
-      {GLYPH[classification]}
+      {classification === 'book' ? <BookGlyph /> : GLYPH[classification]}
     </span>
   );
 }
