@@ -34,7 +34,7 @@ export function EvaluationBar({ score, orientation, pending, className }: Evalua
       // `self-stretch` rather than `h-full`: a percentage height would resolve
       // against a parent whose own height is content-driven, collapsing the bar.
       className={cn(
-        'surface-sunken relative w-[30px] shrink-0 self-stretch overflow-hidden rounded-[3px] border',
+        'surface-sunken relative w-[42px] shrink-0 self-stretch overflow-hidden rounded-[3px] border',
         className,
       )}
       role="img"
@@ -57,7 +57,7 @@ export function EvaluationBar({ score, orientation, pending, className }: Evalua
       {!pending && label && (
         <span
           className={cn(
-            'absolute inset-x-0 text-center text-[10px] font-bold tabular-nums',
+            'absolute inset-x-0 text-center text-xs font-bold tabular-nums',
             labelAtBottom ? 'bottom-1' : 'top-1',
             bandIsLight ? 'text-eval-black' : 'text-eval-white',
           )}

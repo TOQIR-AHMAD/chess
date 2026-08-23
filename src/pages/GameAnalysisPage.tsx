@@ -39,11 +39,11 @@ import { materialSnapshot, sideToMove } from '@/utils/chess';
 import { playerPath } from '@/utils/routes';
 
 /**
- * Width of the evaluation column (30px bar + 6px gap). The name plates are pushed
+ * Width of the evaluation column (42px bar + 6px gap). The name plates are pushed
  * clear of it by a margin, so their outline starts at the board's own left edge.
  */
-const EVAL_COLUMN_OFFSET = 'ml-[36px]';
-const EVAL_COLUMN_WIDTH = 36;
+const EVAL_COLUMN_OFFSET = 'ml-[48px]';
+const EVAL_COLUMN_WIDTH = 48;
 
 /** A name plate is `h-9`, border included; the board leaves room for two of them. */
 const STRIP_HEIGHT = 36;
