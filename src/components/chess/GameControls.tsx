@@ -5,10 +5,10 @@ import { cn } from '@/utils/cn';
 /**
  * Playback controls under the board. Mirrors the keyboard shortcuts exactly.
  *
- * One row, because every pixel it takes is a pixel off the board above it: the
- * four step buttons stretch across whatever is left once autoplay, flip and the
- * ply counter have taken their fixed widths. On a narrow screen the row wraps
- * rather than crushing the targets.
+ * One row of six equal columns — first, back, forward, last, play, flip — all cut
+ * from the same outlined face, with the ply counter hugging the right edge in a
+ * seventh column of its own width. One row, because every pixel it takes is a
+ * pixel off the board above it.
  */
 export function GameControls({
   nav,
@@ -19,10 +19,15 @@ export function GameControls({
   totalMoves: number;
   className?: string;
 }) {
-  const step = 'btn btn-subtle h-8 min-w-11 flex-1 p-0';
+  const step = 'btn btn-subtle h-8 min-h-0 min-w-0 p-0';
 
   return (
-    <div className={cn('flex flex-wrap items-stretch gap-1.5', className)}>
+    <div
+      className={cn(
+        'grid grid-cols-[repeat(6,minmax(0,1fr))_auto] items-stretch gap-1.5',
+        className,
+      )}
+    >
       <button
         type="button"
         className={step}
@@ -78,7 +83,7 @@ export function GameControls({
 
       <button
         type="button"
-        className="btn btn-ghost h-8 shrink-0 gap-1.5 px-2.5 text-xs"
+        className={cn(step, 'gap-1.5 text-xs')}
         onClick={nav.togglePlay}
         disabled={totalMoves === 0}
         title={nav.playing ? 'Pause (Space)' : 'Play (Space)'}
@@ -90,7 +95,7 @@ export function GameControls({
 
       <button
         type="button"
-        className="btn btn-ghost h-8 shrink-0 gap-1.5 px-2.5 text-xs"
+        className={cn(step, 'gap-1.5 text-xs')}
         onClick={nav.flip}
         title="Flip board (F)"
         aria-label="Flip board"
@@ -99,7 +104,7 @@ export function GameControls({
         Flip
       </button>
 
-      <span className="text-muted shrink-0 self-center pl-1 text-xs tabular-nums">
+      <span className="text-muted self-center pl-1 text-xs whitespace-nowrap tabular-nums">
         {nav.index} / {totalMoves}
       </span>
     </div>

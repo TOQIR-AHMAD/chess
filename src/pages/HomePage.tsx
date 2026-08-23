@@ -102,18 +102,6 @@ export function HomePage() {
         ))}
       </div>
 
-      <p className="text-muted mt-12 text-center text-xs leading-relaxed">
-        Game data comes from the public{' '}
-        <a
-          className="hover:text-brand-500 dark:hover:text-brand-400 underline underline-offset-2"
-          href="https://www.chess.com/news/view/published-data-api"
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Chess.com Published-Data API
-        </a>
-        . This is an independent project and is not affiliated with or endorsed by Chess.com.
-      </p>
     </div>
   );
 }

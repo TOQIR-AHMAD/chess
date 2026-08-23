@@ -59,7 +59,12 @@ export function PlayerStrip({
   const grouped = PIECE_ORDER.flatMap((piece) => captured.filter((entry) => entry === piece));
 
   return (
-    <div className={cn('flex h-9 min-w-0 items-center gap-2', className)}>
+    <div
+      className={cn(
+        'flex h-9 min-w-0 items-center gap-2 border bg-[var(--surface-panel)] px-2',
+        className,
+      )}
+    >
       <Avatar name={name} avatar={avatar} side={side} />
 
       <div className="min-w-0 flex-1">
@@ -81,35 +86,44 @@ export function PlayerStrip({
           )}
         </div>
 
-        <div className="flex h-4 items-center gap-1">
-          {grouped.length > 0 && (
-            <span
-              className={cn(
-                'font-serif text-[15px] leading-none tracking-[-0.18em]',
-                side === 'white' ? 'text-eval-black' : 'text-eval-white',
-              )}
-              aria-label={`captured: ${grouped.length} pieces`}
-            >
-              {grouped.map((piece) => PIECE_GLYPH[piece] ?? '').join('')}
-            </span>
-          )}
-          {advantage > 0 && (
-            <span className="text-muted ml-1 text-[11px] font-semibold tabular-nums">
-              +{advantage}
-            </span>
-          )}
-        </div>
+        {/*
+          Only drawn once there is something to draw: an always-present second
+          line would hold the name off the strip's vertical centre for the whole
+          opening, when nothing has been captured yet.
+        */}
+        {(grouped.length > 0 || advantage > 0) && (
+          <div className="flex h-4 items-center gap-1">
+            {grouped.length > 0 && (
+              <span
+                className={cn(
+                  'font-serif text-[15px] leading-none tracking-[-0.18em]',
+                  side === 'white' ? 'text-eval-black' : 'text-eval-white',
+                )}
+                aria-label={`captured: ${grouped.length} pieces`}
+              >
+                {grouped.map((piece) => PIECE_GLYPH[piece] ?? '').join('')}
+              </span>
+            )}
+            {advantage > 0 && (
+              <span className="text-muted ml-1 text-[11px] font-semibold tabular-nums">
+                +{advantage}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {result && (
+        // The playback buttons' own face — outlined white tile, slate rules — with
+        // only the figure itself carrying the win/draw/loss colour.
         <span
           className={cn(
-            'shrink-0 rounded px-1.5 py-0.5 text-center font-mono text-xs font-bold',
+            'btn btn-subtle h-6 w-6 min-h-0 shrink-0 p-0 font-mono text-xs font-bold',
             result === '1'
-              ? 'chip-win'
+              ? 'text-win'
               : result === '\u00BD'
-                ? 'chip-draw'
-                : 'chip-loss',
+                ? 'text-draw'
+                : 'text-loss',
           )}
         >
           {result}

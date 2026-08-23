@@ -22,15 +22,16 @@ export function AnalysisPanel({
   analysing: boolean;
   className?: string;
 }) {
+  // With no move selected there is nothing to say: the card stays out of the way
+  // entirely, and only the running review announces itself.
   if (!move) {
+    if (!analysing) return null;
     return (
       <div className={cn('px-4 py-6 text-center', className)}>
-        <p className="text-secondary text-sm">
-          {analysing ? 'Analysing the game…' : 'Select a move to see its analysis.'}
+        <p className="text-secondary text-sm">Analysing the game…</p>
+        <p className="text-muted mt-1 text-xs">
+          Move quality appears here as each position is evaluated.
         </p>
-        {analysing && (
-          <p className="text-muted mt-1 text-xs">Move quality appears here as each position is evaluated.</p>
-        )}
       </div>
     );
   }
