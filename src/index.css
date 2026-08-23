@@ -1125,10 +1125,11 @@
     overflow: hidden;
   }
 
+  /* Tighter than the console's usual inset: the height goes to the board. */
   .app-shell:has(.page-fit) .content-wrapper {
     min-height: 0;
     overflow: hidden;
-    padding-block: 0.75rem;
+    padding-block: 0.5rem;
   }
 }
 
