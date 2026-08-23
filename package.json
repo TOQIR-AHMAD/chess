@@ -1,0 +1,40 @@
+{
+  "name": "gambit-review",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Chess.com game review and Stockfish analysis platform",
+  "scripts": {
+    "postinstall": "node scripts/copy-engine.mjs",
+    "predev": "node scripts/copy-engine.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/copy-engine.mjs",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "react": "^19.2.8",
+    "react-chessboard": "^5.12.1",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.13.0",
+    "stockfish": "^18.0.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.4",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "jsdom": "^30.0.1",
+    "tailwindcss": "^4.2.4",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.0.0"
+  }
+}

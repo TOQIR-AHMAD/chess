@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Fetch any Chess.com player's games and review them move by move with a Stockfish-powered analysis board, evaluation graph and accuracy report."
+    />
+    <meta name="theme-color" content="#0f2d57" />
+    <title>Gambit Review — Chess Game Analysis</title>
+    <script>
+      // Apply the persisted theme before first paint to avoid a flash of the wrong theme.
+      (function () {
+        try {
+          // Light is the default — it is the admin console's own theme. The OS
+          // preference does not override it, only the theme switch does.
+          var stored = localStorage.getItem('gambit:theme');
+          document.documentElement.classList.toggle('dark', stored === 'dark');
+        } catch (e) {
+          /* storage unavailable — keep the default light theme */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

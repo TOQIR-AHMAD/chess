@@ -1,0 +1,1120 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode (the pre-paint script in index.html sets `.dark`). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /*
+   * The admin-console face. Same stack, same base weight and the same flat
+   * letter-spacing the console's shell uses, so the two products read as one.
+   */
+  --font-sans:
+    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'JetBrains Mono', 'Menlo', monospace;
+
+  /* Accent — the console blue, from the pale tint up to the navy of the rail. */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #7fb0e8;
+  --color-brand-400: #3b82d6;
+  --color-brand-500: #1a5dba;
+  --color-brand-600: #164e9c;
+  --color-brand-700: #123d78;
+  --color-brand-800: #0f2d57;
+  --color-brand-900: #0b2445;
+
+  /* The console's slate ramp, shared by the chrome and both themes. */
+  --color-stone-50: #f8fafc;
+  --color-stone-100: #f1f5f9;
+  --color-stone-200: #e2e8f0;
+  --color-stone-300: #cbd5e1;
+  --color-stone-400: #94a3b8;
+  --color-stone-500: #64748b;
+  --color-stone-600: #475569;
+  --color-stone-700: #334155;
+  --color-stone-800: #1e293b;
+  --color-stone-900: #0f172a;
+
+  /*
+   * Square corners, everywhere. The console zeroes the radius on every element,
+   * and that squareness is the most recognisable thing about its surfaces — so
+   * the tokens are 0 and the global rule at the end of this file holds the line
+   * against utility classes.
+   */
+  --radius-panel: 0px;
+  --radius-control: 0px;
+  --radius-large: 0px;
+}
+
+/*
+ * Surface tokens. Every panel, border and text colour resolves through these, so
+ * the two themes stay consistent without per-component overrides.
+ *
+ * Light is the primary theme — it is the console's own. Content sits on a slate
+ * wash, cards are white and outlined, and the one shadow in the system is the
+ * console's soft double drop under a card.
+ */
+:root {
+  --surface-app: #f1f5f9;
+  --surface-panel: #ffffff;
+  --surface-raised: #f8fafc;
+  --surface-sunken: #f1f5f9;
+  --surface-hover: #e2e8f0;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+
+  /* The console's card: a hairline outline plus a soft, very wide drop. */
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 18px 40px rgb(15 23 42 / 0.04);
+  --shadow-card-strong: 0 1px 2px rgb(15 23 42 / 0.08), 0 18px 40px rgb(15 23 42 / 0.08);
+
+  /* The rail keeps its navy gradient in both themes. */
+  --surface-rail: linear-gradient(180deg, #0f2d57 0%, #0b2445 100%);
+  --surface-rail-wash: rgb(0 0 0 / 0.2);
+
+  /* Rail geometry, shared by the rail itself and the collapsed variant. */
+  --rail-width: 16rem;
+  --rail-width-collapsed: 4.6rem;
+
+  /* The shell's own measurements: navbar height and content-wrapper padding. */
+  --navbar-height: 4rem;
+  --content-pad-y: 1.5rem;
+  --content-pad-x: 1.75rem;
+
+  /*
+   * Table surfaces. The console's data tables run white under the header rather
+   * than a filled bar, stripe in the palest slate, and take a pale blue on hover.
+   */
+  --surface-thead: #ffffff;
+  --border-table: #e2e8f0;
+  --row-stripe: #f8fafc;
+  --row-hover: #eef6ff;
+
+  --board-highlight: rgb(255 255 51 / 0.5);
+  --board-lastmove: rgb(255 255 51 / 0.38);
+  --board-check: rgb(229 57 53 / 0.62);
+
+  /*
+   * Accent ink: the blue used for text and icons sitting on a page surface. It
+   * has to move between the themes — the navy that reads on white would vanish
+   * on the dark ground, and the pale blue that reads there is invisible here.
+   */
+  --accent-ink: var(--color-brand-700);
+}
+
+/*
+ * Dark is the same system after nightfall: the navy the rail is cut from becomes
+ * the page, cards separate by value, and the blue accent lifts a step so it still
+ * carries on a dark ground.
+ */
+.dark {
+  --surface-app: #0b1220;
+  --surface-panel: #111c2e;
+  --surface-raised: rgb(255 255 255 / 0.06);
+  --surface-sunken: rgb(0 0 0 / 0.25);
+  --surface-hover: rgb(255 255 255 / 0.1);
+  --border-subtle: rgb(255 255 255 / 0.1);
+  --border-strong: rgb(255 255 255 / 0.2);
+  --text-primary: #f8fafc;
+  --text-secondary: rgb(255 255 255 / 0.74);
+  --text-muted: rgb(255 255 255 / 0.52);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 18px 40px rgb(0 0 0 / 0.22);
+  --shadow-card-strong: 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 40px rgb(0 0 0 / 0.3);
+
+  --surface-rail: linear-gradient(180deg, #0f2d57 0%, #0b2445 100%);
+  --surface-rail-wash: rgb(0 0 0 / 0.25);
+
+  --surface-thead: rgb(255 255 255 / 0.04);
+  --border-table: rgb(255 255 255 / 0.1);
+  --row-stripe: rgb(255 255 255 / 0.03);
+  --row-hover: rgb(26 93 186 / 0.22);
+
+  --board-highlight: rgb(255 255 51 / 0.5);
+  --board-lastmove: rgb(255 255 51 / 0.38);
+  --board-check: rgb(229 57 53 / 0.6);
+
+  --accent-ink: var(--color-brand-300);
+}
+
+/*
+ * Board themes. `classic` is the default green-and-cream board — it does not change
+ * between light and dark mode, because a board should look like a board.
+ */
+[data-board='classic'] {
+  --board-light: #ebecd0;
+  --board-dark: #779556;
+}
+[data-board='slate'] {
+  --board-light: #dee3e6;
+  --board-dark: #8ca2ad;
+}
+[data-board='walnut'] {
+  --board-light: #f0d9b5;
+  --board-dark: #b58863;
+}
+[data-board='ocean'] {
+  --board-light: #dbe7f0;
+  --board-dark: #6a91b8;
+}
+
+/*
+ * Move-quality and result palette. Like the board, these do not change between
+ * light and dark: a blunder should be the same red in both themes. The two status
+ * colours are the console's own — its amber and its rose.
+ */
+:root {
+  --cls-brilliant: #26c2a3;
+  --cls-best: #16a34a;
+  --cls-excellent: #4d9d6b;
+  --cls-good: #64748b;
+  --cls-book: #b98a5a;
+  --cls-inaccuracy: #f59e0b;
+  --cls-mistake: #ea7317;
+  --cls-blunder: #e11d48;
+  --cls-missed: #f2647c;
+
+  --result-win: #16a34a;
+  --result-draw: #64748b;
+  --result-loss: #e11d48;
+
+  --status-danger: #e11d48;
+  --status-warning: #f59e0b;
+
+  /*
+   * The evaluation bar and the side swatches. Neither end is pure black or white:
+   * a full-white bar next to a cream board glares, and full black swallows the
+   * midpoint marker.
+   */
+  --eval-white: #e2e8f0;
+  --eval-black: #334155;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    margin: 0;
+    background: var(--surface-app);
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    /* 14px base with the console's medium default weight and flat tracking. */
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+  }
+
+  /* Headings take the full-strength colour; body copy stays a step back. */
+  h1,
+  h2,
+  h3 {
+    color: var(--text-primary);
+    font-weight: 800;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-brand-500);
+    color: #ffffff;
+  }
+
+  /* Slim, theme-aware scrollbars for the scrolling panels. */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  .scroll-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+  }
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  /*
+   * The card: white, a hairline outline and the console's soft double drop. The
+   * outline is what separates it from the slate page — the shadow only lifts it.
+   */
+  .panel {
+    background: var(--surface-panel);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* The card header is a paler band, closed off by the same hairline. */
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    background: var(--surface-raised);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .panel-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  /* Form labels: small, heavy, and a step quieter than the value they name. */
+  .field-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+
+  .surface-raised {
+    background: var(--surface-raised);
+  }
+  .surface-sunken {
+    background: var(--surface-sunken);
+  }
+  .text-secondary {
+    color: var(--text-secondary);
+  }
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  /* Accent text, and the same colour arrived at by hover. */
+  .text-accent {
+    color: var(--accent-ink);
+  }
+  .hover-accent:hover {
+    color: var(--accent-ink);
+  }
+  /* The pale accent wash behind a selected move or a strong accuracy figure. */
+  .bg-accent-soft {
+    background: color-mix(in srgb, var(--color-brand-500) 12%, transparent);
+  }
+
+  /*
+   * Buttons. The console's primary is a blue gradient with a darker edge; every
+   * other variant is a flat fill of the same height and weight.
+   */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 750;
+    line-height: 1.2;
+    min-height: 2.05rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid transparent;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease,
+      filter 120ms ease;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-700) 100%);
+    border-color: var(--color-brand-700);
+    color: #ffffff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  /* The console's secondary: white, outlined, slate ink. */
+  .btn-subtle {
+    background: var(--surface-panel);
+    border-color: var(--border-strong);
+    color: var(--text-secondary);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  }
+  .btn-subtle:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  .btn-warning {
+    background: var(--status-warning);
+    border-color: #d97706;
+    color: #ffffff;
+  }
+  .btn-danger {
+    background: var(--status-danger);
+    border-color: #be123c;
+    color: #ffffff;
+  }
+
+  .input {
+    width: 100%;
+    background: var(--surface-panel);
+    border: 1px solid var(--border-strong);
+    min-height: 2.2rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition:
+      border-color 140ms ease,
+      box-shadow 140ms ease,
+      background-color 140ms ease;
+  }
+  .dark .input {
+    background: var(--surface-sunken);
+  }
+  .input::placeholder {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 2px rgb(26 93 186 / 0.18);
+  }
+  /* The large search field: taller, and 16px so mobile does not zoom. */
+  .input-lg {
+    font-size: 16px;
+  }
+
+  /* The console's badge: small, heavy, tightly padded. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.34rem 0.48rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .tab {
+    flex: 1 1 0;
+    padding: 0.7rem 0.5rem;
+    font-size: 0.86rem;
+    font-weight: 650;
+    color: var(--text-muted);
+    border-bottom: 3px solid transparent;
+    transition:
+      color 140ms ease,
+      border-color 140ms ease,
+      background-color 140ms ease;
+    cursor: pointer;
+  }
+  .tab:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover);
+  }
+  .tab[aria-selected='true'] {
+    color: var(--color-brand-700);
+    border-bottom-color: var(--color-brand-500);
+  }
+  .dark .tab[aria-selected='true'] {
+    color: var(--text-primary);
+  }
+  /* Icon over label, so a tab is recognisable before the word is read. */
+  .tab-stacked {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    font-size: 12px;
+  }
+  .tab-stacked[aria-selected='true'] svg {
+    color: var(--color-brand-500);
+  }
+
+  /*
+   * ---------------------------------------------------------------------------
+   * The shell: navy rail, translucent navbar, slate content wrapper.
+   *
+   * This is the admin console's own shell, measurement for measurement — a 16rem
+   * rail collapsing to 4.6rem, a 4rem bar above the content, and content inset by
+   * 1.5rem / 1.75rem. The rail carries its own white washes rather than resolving
+   * through the page tokens, because it is dark in both themes.
+   * ---------------------------------------------------------------------------
+   */
+
+  .rail {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    width: var(--rail-width);
+    flex-shrink: 0;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface-rail);
+    color: #ffffff;
+    transition: width 200ms ease;
+  }
+  .rail-collapsed {
+    width: var(--rail-width-collapsed);
+  }
+
+  /* Brand block: navbar height, so the rail and the bar line up across the seam. */
+  .rail-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    height: var(--navbar-height);
+    flex-shrink: 0;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+    color: #ffffff;
+  }
+  .rail-collapsed .rail-brand {
+    justify-content: center;
+    padding: 0;
+  }
+
+  /* The mark sits on a white tile — the console's one bright spot in the navy. */
+  .rail-brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
+    width: 2.25rem;
+    flex-shrink: 0;
+    padding: 0.25rem;
+    background: #ffffff;
+  }
+
+  .rail-brand-copy {
+    min-width: 0;
+  }
+  .rail-brand-copy > span {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 800;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .rail-brand-copy small {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: rgb(255 255 255 / 0.6);
+    white-space: nowrap;
+  }
+
+  .rail-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1rem 0.75rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.25) transparent;
+  }
+  .rail-body::-webkit-scrollbar {
+    width: 6px;
+  }
+  .rail-body::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.25);
+  }
+  .rail-collapsed .rail-body {
+    padding-inline: 0.6rem;
+  }
+
+  /* Who is in view: the console's user panel, named for a chess player instead. */
+  .rail-user {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+  }
+  .rail-avatar {
+    height: 2.5rem;
+    width: 2.5rem;
+    flex-shrink: 0;
+    border: 2px solid rgb(255 255 255 / 0.2);
+    object-fit: cover;
+  }
+  .rail-avatar-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgb(255 255 255 / 0.1);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .rail-user-name {
+    display: block;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rail-user small {
+    display: block;
+    color: rgb(255 255 255 / 0.58);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .rail-heading {
+    margin: 1rem 0 0.35rem;
+    padding-inline: 0.75rem;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgb(255 255 255 / 0.5);
+  }
+  .rail-divider {
+    margin: 0.75rem 0;
+    border: 0;
+    border-top: 1px solid rgb(255 255 255 / 0.1);
+  }
+
+  /*
+   * Rail entries, at the console's own metrics. Icons are monochrome and inherit
+   * the link colour, so the active row — a flat white wash — is the only thing in
+   * the column that stands out.
+   */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    min-height: 2.35rem;
+    padding: 0.55rem 0.75rem;
+    margin-bottom: 0.15rem;
+    font-size: 0.88rem;
+    font-weight: 650;
+    color: rgb(255 255 255 / 0.76);
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+  .nav-item:hover {
+    background: rgb(255 255 255 / 0.1);
+    color: #ffffff;
+  }
+  .nav-item[aria-current='page'] {
+    background: rgb(255 255 255 / 0.15);
+    color: #ffffff;
+  }
+  .nav-item .nav-icon {
+    flex-shrink: 0;
+    width: 1.25rem;
+    color: inherit;
+  }
+  .rail-collapsed .nav-item {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  /*
+   * Top navbar: white at 92% over the page with a blur behind it, closed off by
+   * the same hairline every other edge in the console uses.
+   */
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: var(--navbar-height);
+    flex-shrink: 0;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid var(--border-subtle);
+    background: color-mix(in srgb, var(--surface-panel) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .navbar-title {
+    font-size: 1.12rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .navbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
+    width: 2.25rem;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+  .navbar-btn:hover {
+    background: var(--surface-hover);
+    color: var(--color-brand-700);
+  }
+  .dark .navbar-btn:hover {
+    color: var(--text-primary);
+  }
+
+  /*
+   * The content wrapper: the console's slate field, inset 1.5rem / 1.75rem and
+   * tightened to 1rem once the rail drops away.
+   */
+  .content-wrapper {
+    background: var(--surface-app);
+    padding: var(--content-pad-y) var(--content-pad-x);
+  }
+
+  /*
+   * A page that wants the full width — the analysis workspace — drops the side
+   * inset by marking its root `page-flush`, so the board can run edge to edge.
+   */
+  .content-wrapper:has(> .page-flush) {
+    padding-inline: 0;
+  }
+
+  /* The console's footer strip: white, hairline on top, quiet slate copy. */
+  .app-footer {
+    background: var(--surface-panel);
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    padding: 0.9rem 1.25rem;
+  }
+
+  /*
+   * The raised list row: icon, bold title, muted subtitle. Used wherever a set of
+   * destinations needs more weight than a plain list.
+   */
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+  .list-row:hover {
+    background: var(--row-hover);
+    border-color: var(--color-brand-300);
+  }
+  .list-row-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .list-row-sub {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /*
+   * Move-quality classes. `cls-*` colours the annotation glyph in the move list;
+   * `badge-*` is the filled pill, tinted from the same value so the two always
+   * agree without a second set of colours to keep in sync.
+   */
+  .cls-brilliant {
+    color: var(--cls-brilliant);
+  }
+  .cls-best {
+    color: var(--cls-best);
+  }
+  .cls-excellent {
+    color: var(--cls-excellent);
+  }
+  .cls-good {
+    color: var(--cls-good);
+  }
+  .cls-book {
+    color: var(--cls-book);
+  }
+  .cls-inaccuracy {
+    color: var(--cls-inaccuracy);
+  }
+  .cls-mistake {
+    color: var(--cls-mistake);
+  }
+  .cls-blunder {
+    color: var(--cls-blunder);
+  }
+  .cls-missed {
+    color: var(--cls-missed);
+  }
+
+  .badge-brilliant,
+  .badge-best,
+  .badge-excellent,
+  .badge-good,
+  .badge-book,
+  .badge-inaccuracy,
+  .badge-mistake,
+  .badge-blunder,
+  .badge-missed {
+    background: color-mix(in srgb, var(--badge-tint) 14%, transparent);
+    color: var(--badge-tint);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--badge-tint) 32%, transparent);
+  }
+  .badge-brilliant {
+    --badge-tint: var(--cls-brilliant);
+  }
+  .badge-best {
+    --badge-tint: var(--cls-best);
+  }
+  .badge-excellent {
+    --badge-tint: var(--cls-excellent);
+  }
+  .badge-good {
+    --badge-tint: var(--cls-good);
+  }
+  .badge-book {
+    --badge-tint: var(--cls-book);
+  }
+  .badge-inaccuracy {
+    --badge-tint: var(--cls-inaccuracy);
+  }
+  .badge-mistake {
+    --badge-tint: var(--cls-mistake);
+  }
+  .badge-blunder {
+    --badge-tint: var(--cls-blunder);
+  }
+  .badge-missed {
+    --badge-tint: var(--cls-missed);
+  }
+
+  /*
+   * Solid fills for the badge that sits on a board square. White glyph on every
+   * tone except the two light ones, which take the dark ink instead.
+   */
+  .tone-brilliant,
+  .tone-best,
+  .tone-excellent,
+  .tone-good,
+  .tone-book,
+  .tone-inaccuracy,
+  .tone-mistake,
+  .tone-blunder,
+  .tone-missed {
+    background: var(--badge-tint);
+    color: #ffffff;
+  }
+  .tone-brilliant {
+    --badge-tint: var(--cls-brilliant);
+  }
+  .tone-best {
+    --badge-tint: var(--cls-best);
+  }
+  .tone-excellent {
+    --badge-tint: var(--cls-excellent);
+  }
+  .tone-good {
+    --badge-tint: var(--cls-good);
+  }
+  .tone-book {
+    --badge-tint: var(--cls-book);
+    color: #0f172a;
+  }
+  .tone-inaccuracy {
+    --badge-tint: var(--cls-inaccuracy);
+    color: #0f172a;
+  }
+  .tone-mistake {
+    --badge-tint: var(--cls-mistake);
+  }
+  .tone-blunder {
+    --badge-tint: var(--cls-blunder);
+  }
+  .tone-missed {
+    --badge-tint: var(--cls-missed);
+  }
+
+  /* Side swatches: the two ends of the evaluation bar, and White/Black markers. */
+  .bg-eval-white {
+    background: var(--eval-white);
+  }
+  .bg-eval-black {
+    background: var(--eval-black);
+  }
+  .text-eval-white {
+    color: var(--eval-white);
+  }
+  .text-eval-black {
+    color: var(--eval-black);
+  }
+
+  /* Result and status colours, same treatment. */
+  .text-win {
+    color: var(--result-win);
+  }
+  .text-draw {
+    color: var(--result-draw);
+  }
+  .text-loss {
+    color: var(--result-loss);
+  }
+  .text-danger {
+    color: var(--status-danger);
+  }
+  .chip-win {
+    background: color-mix(in srgb, var(--result-win) 14%, transparent);
+    color: var(--result-win);
+  }
+  .chip-draw {
+    background: color-mix(in srgb, var(--result-draw) 16%, transparent);
+    color: var(--result-draw);
+  }
+  .chip-loss {
+    background: color-mix(in srgb, var(--result-loss) 14%, transparent);
+    color: var(--result-loss);
+  }
+  .chip-danger {
+    background: color-mix(in srgb, var(--status-danger) 12%, transparent);
+    color: var(--status-danger);
+  }
+  /* Also the player-title badge (GM, IM, …), which reads as gold by convention. */
+  .chip-warning {
+    background: color-mix(in srgb, var(--status-warning) 18%, transparent);
+    color: #b45309;
+  }
+  .dark .chip-warning {
+    color: var(--status-warning);
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--surface-raised) 25%,
+      var(--surface-hover) 37%,
+      var(--surface-raised) 63%
+    );
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 200ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@layer components {
+  /*
+   * ---------------------------------------------------------------------------
+   * Data tables.
+   *
+   * The console's list pages: the header is a white band of small, heavy,
+   * uppercase slate labels, rows separate by hairline, stripe in the palest
+   * slate, and take a pale blue wash on hover.
+   * ---------------------------------------------------------------------------
+   */
+  .tbl-head {
+    background: var(--surface-thead);
+    padding: 0.8rem 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-table);
+  }
+
+  .tbl-row {
+    padding: 0.72rem 0.75rem;
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    transition: background-color 120ms ease;
+  }
+  .tbl-row:nth-of-type(odd) {
+    background: var(--row-stripe);
+  }
+  .tbl-row:hover {
+    background: var(--row-hover);
+  }
+
+  /*
+   * ---------------------------------------------------------------------------
+   * Counter cards.
+   *
+   * The console's dashboard tiles: a solid block of colour carrying one big
+   * number, its label, and a large watermark glyph bled into the corner, under
+   * the heavier of the two card shadows. The number is the only thing at full
+   * contrast — everything else sits back.
+   * ---------------------------------------------------------------------------
+   */
+  .stat-card {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    padding: 1.15rem;
+    min-height: 8.5rem;
+    color: #ffffff;
+    box-shadow: var(--shadow-card-strong);
+    transition:
+      filter 120ms ease,
+      transform 90ms ease;
+  }
+  .stat-card:hover {
+    filter: brightness(1.06);
+  }
+  .stat-card:active {
+    transform: translateY(1px);
+  }
+
+  .stat-card-value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-card-label {
+    margin-top: 0.15rem;
+    font-size: 0.9rem;
+    font-weight: 750;
+    color: rgb(255 255 255 / 0.88);
+  }
+  .stat-card-sub {
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: rgb(255 255 255 / 0.66);
+  }
+
+  /* The watermark: large, low-contrast, and clipped by the card's own overflow. */
+  .stat-card-glyph {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.6rem;
+    opacity: 0.22;
+    pointer-events: none;
+  }
+
+  /* The console's four dashboard colours, in its order. */
+  .stat-primary {
+    background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-700) 100%);
+  }
+  .stat-warning {
+    background: #f59e0b;
+  }
+  .stat-info {
+    background: linear-gradient(135deg, #2d7fb8 0%, #0f2d57 100%);
+  }
+  .stat-success {
+    background: #16a34a;
+  }
+  .stat-muted {
+    background: var(--color-stone-600);
+  }
+}
+
+@media (max-width: 991.98px) {
+  :root {
+    --content-pad-y: 1rem;
+    --content-pad-x: 1rem;
+  }
+
+  .navbar {
+    padding-inline: 1rem;
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Square corners.
+ *
+ * The console zeroes the radius on every element it renders, and this is the
+ * same rule — kept last and marked important so Tailwind's `rounded-*`
+ * utilities cannot round a corner back. The exceptions below it are the few
+ * controls whose shape carries meaning rather than style: the settings switch,
+ * the progress meters, and the live-analysis pulse.
+ * ---------------------------------------------------------------------------
+ */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}
+
+.is-pill,
+.is-pill::before,
+.is-pill::after {
+  border-radius: 9999px !important;
+}
