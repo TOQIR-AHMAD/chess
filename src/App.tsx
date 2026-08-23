@@ -15,9 +15,10 @@ export default function App() {
       <BrowserRouter>
         {/* Inside the router: the rail and the navbar both navigate. */}
         <ShellProvider>
-          <div className="flex min-h-dvh">
+          {/* `app-shell` / `app-main` are the hooks a `page-fit` page locks to the viewport. */}
+          <div className="app-shell flex min-h-dvh">
             <Sidebar />
-            <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
+            <div className="app-main flex min-h-dvh min-w-0 flex-1 flex-col">
               <Header />
               {/* The console's content wrapper: the slate field the pages sit on. */}
               <main className="content-wrapper flex-1">
@@ -32,10 +33,6 @@ export default function App() {
                   </Routes>
                 </ErrorBoundary>
               </main>
-              <footer className="app-footer text-center">
-                Built with Stockfish 18 (GPL-3.0) running locally in your browser · Game data from
-                the public Chess.com Published-Data API · Not affiliated with Chess.com
-              </footer>
             </div>
           </div>
         </ShellProvider>

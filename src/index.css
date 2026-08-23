@@ -699,6 +699,15 @@
   .dark .navbar-btn:hover {
     color: var(--text-primary);
   }
+  /*
+   * A navbar button that opens a panel stays lit while that panel is open. Keyed
+   * off `data-active` rather than `aria-expanded`, which the rail toggle also
+   * carries for a quite different meaning.
+   */
+  .navbar-btn[data-active='true'] {
+    background: var(--color-brand-500);
+    color: #ffffff;
+  }
 
   /*
    * The content wrapper: the console's slate field, inset 1.5rem / 1.75rem and
@@ -715,15 +724,6 @@
    */
   .content-wrapper:has(> .page-flush) {
     padding-inline: 0;
-  }
-
-  /* The console's footer strip: white, hairline on top, quiet slate copy. */
-  .app-footer {
-    background: var(--surface-panel);
-    border-top: 1px solid var(--border-subtle);
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    padding: 0.9rem 1.25rem;
   }
 
   /*
@@ -1093,6 +1093,42 @@
 
   .navbar {
     padding-inline: 1rem;
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Viewport-fitted pages.
+ *
+ * A page that marks its root `page-fit` claims exactly the viewport rather than
+ * growing the shell: the window never scrolls, and each region inside the page
+ * scrolls on its own instead. Only from `lg` up — below that the layout stacks
+ * and scrolling the page is the right behaviour.
+ *
+ * These rules sit outside `@layer` deliberately: unlayered declarations win
+ * against Tailwind's utilities, which is what lets them undo the `min-h-dvh`
+ * and `flex-1` the shell is built from.
+ * ---------------------------------------------------------------------------
+ */
+@media (min-width: 1024px) {
+  html:has(.page-fit),
+  body:has(.page-fit) {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell:has(.page-fit),
+  .app-shell:has(.page-fit) .app-main {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell:has(.page-fit) .content-wrapper {
+    min-height: 0;
+    overflow: hidden;
+    padding-block: 0.75rem;
   }
 }
 

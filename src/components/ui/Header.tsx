@@ -50,7 +50,7 @@ function useFullscreen(): [boolean, () => void] {
 export function Header() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useSettings();
-  const { collapsed, toggleCollapsed, title } = useShell();
+  const { collapsed, toggleCollapsed, title, setActionSlot } = useShell();
   const [fullscreen, toggleFullscreen] = useFullscreen();
   const [value, setValue] = useState('');
 
@@ -81,41 +81,47 @@ export function Header() {
 
       <h1 className="navbar-title">{title}</h1>
 
-      <form onSubmit={submit} className="relative ml-auto hidden w-full max-w-xs sm:block">
-        <SearchIcon
-          size={15}
-          className="text-muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
-        />
-        <input
-          className="input pl-8"
-          placeholder="Search another player…"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          aria-label="Search a Chess.com player"
-          autoComplete="off"
-          spellCheck={false}
-        />
-      </form>
+      {/* Everything to the right of the title travels as one group. */}
+      <div className="ml-auto flex items-center gap-1">
+        <form onSubmit={submit} className="relative hidden w-full max-w-xs sm:block">
+          <SearchIcon
+            size={15}
+            className="text-muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
+          />
+          <input
+            className="input pl-8"
+            placeholder="Search another player…"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            aria-label="Search a Chess.com player"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </form>
 
-      <button
-        type="button"
-        onClick={toggleFullscreen}
-        className="navbar-btn ml-auto hidden sm:ml-0 sm:inline-flex"
-        title={fullscreen ? 'Exit full screen' : 'Full screen'}
-        aria-label={fullscreen ? 'Exit full screen' : 'Enter full screen'}
-      >
-        {fullscreen ? <CompressIcon size={18} /> : <ExpandIcon size={18} />}
-      </button>
+        {/* The current page's own controls land here, via `NavbarActions`. */}
+        <div ref={setActionSlot} className="flex items-center gap-1" />
 
-      <button
-        type="button"
-        onClick={toggleTheme}
-        className="navbar-btn ml-auto sm:ml-0"
-        title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-        aria-label="Toggle colour theme"
-      >
-        {theme === 'dark' ? <SunIcon size={18} /> : <MoonIcon size={18} />}
-      </button>
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="navbar-btn hidden sm:inline-flex"
+          title={fullscreen ? 'Exit full screen' : 'Full screen'}
+          aria-label={fullscreen ? 'Exit full screen' : 'Enter full screen'}
+        >
+          {fullscreen ? <CompressIcon size={18} /> : <ExpandIcon size={18} />}
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="navbar-btn"
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          aria-label="Toggle colour theme"
+        >
+          {theme === 'dark' ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+        </button>
+      </div>
     </header>
   );
 }

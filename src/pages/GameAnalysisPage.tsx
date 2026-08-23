@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Chess } from 'chess.js';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Score } from '@/types/analysis';
 import type { Color, ParsedMove } from '@/types/game';
 import { useGame } from '@/hooks/useGame';
 import { useGameAnalysis } from '@/hooks/useGameAnalysis';
 import { useGameNavigation } from '@/hooks/useGameNavigation';
+import { useElementSize } from '@/hooks/useElementSize';
+import { useIsDesktop } from '@/hooks/useMediaQuery';
 import { useSettings } from '@/hooks/useSettings';
-import { usePageTitle } from '@/hooks/useShell';
+import { NavbarActions, usePageTitle } from '@/hooks/useShell';
 import { useStockfish } from '@/hooks/useStockfish';
 import { usePlayerAvatars } from '@/hooks/usePlayerAvatars';
 import { ChessBoard, type BoardMove } from '@/components/chess/ChessBoard';
@@ -23,8 +25,6 @@ import { EngineSettings } from '@/components/chess/EngineSettings';
 import { Panel } from '@/components/ui/Panel';
 import { ErrorState, ProgressBar, RetryButton, Skeleton, Spinner } from '@/components/ui/Feedback';
 import {
-  ChevronLeft,
-  ChevronRight,
   SettingsIcon,
   StopIcon,
   CpuIcon,
@@ -36,14 +36,20 @@ import { detectOpening } from '@/services/openings';
 import { PgnError } from '@/services/pgnParser';
 import { toWhitePov } from '@/utils/evaluation';
 import { materialSnapshot, sideToMove } from '@/utils/chess';
-import { analysisPath, playerPath } from '@/utils/routes';
-import { cn } from '@/utils/cn';
+import { playerPath } from '@/utils/routes';
 
 /**
  * Width of the evaluation column (22px bar + 6px gap). The name plates are indented
  * by it so they line up with the board's edges rather than the bar's.
  */
 const EVAL_COLUMN_OFFSET = 'pl-[28px]';
+const EVAL_COLUMN_WIDTH = 28;
+
+/** A name plate is `h-10`; the board has to leave room for the one above and below. */
+const STRIP_HEIGHT = 40;
+
+/** Below this the board stops shrinking and the stage scrolls instead. */
+const MIN_BOARD_SIZE = 220;
 
 type RailTab = 'moves' | 'review' | 'engine' | 'info';
 
@@ -66,10 +72,9 @@ const RAIL_TABS: Array<{ key: RailTab; label: string; icon: typeof ListIcon }> =
 export function GameAnalysisPage() {
   const { username = '', gameId = '' } = useParams<{ username: string; gameId: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const settings = useSettings();
 
-  const { game, parsed, siblings, loading, error, reload, scanned } = useGame(
+  const { game, parsed, loading, error, reload, scanned } = useGame(
     username,
     gameId,
     searchParams.get('m'),
@@ -90,7 +95,23 @@ export function GameAnalysisPage() {
   const [exploration, setExploration] = useState<ParsedMove[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [tab, setTab] = useState<RailTab>('moves');
-  const boardWrapRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * The board is sized from the box it sits in rather than from the width alone:
+   * on a desktop screen the workspace is locked to the viewport, so the square
+   * has to take the smaller of the room left across and the room left down.
+   */
+  const [stageRef, stage] = useElementSize<HTMLDivElement>();
+  const fitViewport = useIsDesktop();
+
+  const boardSize = useMemo(() => {
+    if (stage.width === 0) return null;
+    const byWidth = stage.width - EVAL_COLUMN_WIDTH;
+    // Stacked layout: the page scrolls, so only the width constrains the board.
+    if (!fitViewport) return Math.max(MIN_BOARD_SIZE, byWidth);
+    const byHeight = stage.height - 2 * STRIP_HEIGHT;
+    return Math.max(MIN_BOARD_SIZE, Math.min(byWidth, byHeight));
+  }, [fitViewport, stage.height, stage.width]);
 
   // Leaving the position resets any side line.
   useEffect(() => setExploration([]), [nav.index, parsed]);
@@ -298,16 +319,6 @@ export function GameAnalysisPage() {
   const bottomStrip = stripFor(nav.orientation);
   const topStrip = stripFor(nav.orientation === 'white' ? 'black' : 'white');
 
-  // Previous / next game within the same month.
-  const { previousGame, nextGame } = useMemo(() => {
-    const index = siblings.findIndex((entry) => entry.id === gameId);
-    if (index === -1) return { previousGame: null, nextGame: null };
-    return {
-      previousGame: index > 0 ? siblings[index - 1] : null,
-      nextGame: index < siblings.length - 1 ? siblings[index + 1] : null,
-    };
-  }, [gameId, siblings]);
-
   if (loading) return <AnalysisSkeleton scanned={scanned} />;
 
   if (error || !game || !parsed) {
@@ -338,52 +349,30 @@ export function GameAnalysisPage() {
   const progress = analysis.progress;
 
   return (
-    /* Flush: the workspace runs edge to edge, without the console's side inset. */
-    <div className="page-flush w-full">
-      {/* Sub-header: navigation between games. */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Link to={playerPath(username)} className="btn btn-ghost h-8 px-2.5 text-xs">
-          <ChevronLeft size={14} />
-          {username}’s games
-        </Link>
-
-        <div className="ml-auto flex items-center gap-1.5">
-          <button
-            type="button"
-            className="btn btn-ghost h-8 px-2.5 text-xs"
-            disabled={!previousGame}
-            onClick={() => previousGame && navigate(analysisPath(username, previousGame))}
-            title="Newer game"
-          >
-            <ChevronLeft size={14} />
-            Newer
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost h-8 px-2.5 text-xs"
-            disabled={!nextGame}
-            onClick={() => nextGame && navigate(analysisPath(username, nextGame))}
-            title="Older game"
-          >
-            Older
-            <ChevronRight size={14} />
-          </button>
-          <button
-            type="button"
-            className={cn('btn h-8 w-8 p-0', showSettings ? 'btn-primary' : 'btn-ghost')}
-            onClick={() => setShowSettings((value) => !value)}
-            title="Engine and board settings"
-            aria-label="Settings"
-            aria-expanded={showSettings}
-          >
-            <SettingsIcon size={15} />
-          </button>
-        </div>
-      </div>
+    /*
+      Flush: the workspace runs edge to edge, without the console's side inset.
+      Fit: from `lg` up the whole page is exactly one viewport tall — nothing here
+      scrolls the window, the move list and the rail scroll inside themselves.
+    */
+    <div className="page-flush page-fit flex w-full flex-col lg:h-full lg:min-h-0">
+      {/* Engine and board settings live in the navbar, beside the shell's own buttons. */}
+      <NavbarActions>
+        <button
+          type="button"
+          className="navbar-btn"
+          data-active={showSettings ? 'true' : 'false'}
+          onClick={() => setShowSettings((value) => !value)}
+          title="Engine and board settings"
+          aria-label="Engine and board settings"
+          aria-expanded={showSettings}
+        >
+          <SettingsIcon size={18} />
+        </button>
+      </NavbarActions>
 
       {/* Analysis progress. */}
       {(analysing || progress.phase === 'error') && (
-        <div className="panel mb-3 flex flex-wrap items-center gap-3 px-4 py-2.5">
+        <div className="panel mb-2 flex shrink-0 flex-wrap items-center gap-3 px-4 py-2">
           {analysing ? <Spinner size={14} className="text-accent" /> : <CpuIcon size={15} className="text-danger" />}
           <span className="text-sm">
             {progress.phase === 'error' ? (progress.error ?? 'Analysis failed') : progress.message || 'Preparing…'}
@@ -407,7 +396,7 @@ export function GameAnalysisPage() {
       )}
 
       {!analysing && !analysis.review && progress.phase !== 'error' && (
-        <div className="panel mb-3 flex flex-wrap items-center gap-3 px-4 py-2.5">
+        <div className="panel mb-2 flex shrink-0 flex-wrap items-center gap-3 px-4 py-2">
           <CpuIcon size={15} className="text-accent" />
           <span className="text-secondary text-sm">
             This game has not been reviewed yet.
@@ -424,59 +413,69 @@ export function GameAnalysisPage() {
         reading order a phone wants: board, controls, evaluation, moves, analysis.
         From `lg` up the wrappers become real columns again and order is ignored.
       */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="flex flex-col gap-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch xl:grid-cols-[minmax(0,1fr)_400px]">
         {/* ---------------- Board column ---------------- */}
-        <div className="contents lg:block lg:w-full lg:min-w-0 lg:space-y-3">
+        <div className="contents lg:flex lg:min-h-0 lg:w-full lg:min-w-0 lg:flex-col lg:gap-2">
           {/*
-            The board takes the whole column. From `lg` up it also has to fit the
-            viewport height — it sits beside the rail there, and being square, an
-            unbounded width would push the bottom name plate off the screen. In
-            the stacked layout below `lg` the page scrolls anyway, so the board
-            simply takes the full width.
+            The stage is the room the board is allowed to take. It gets whatever
+            the column has left once the controls are laid out, and the square is
+            measured from it — the smaller of its width and its height — so the
+            bottom name plate can never fall off the screen.
           */}
-          <div ref={boardWrapRef} className="order-1 w-full lg:max-w-[min(calc(100dvh-12rem),1100px)]">
-            {topStrip && (
-              <PlayerStrip
-                {...topStrip}
-                avatar={topStrip.avatar}
-                clockSeconds={topStrip.clockSeconds}
-                className={EVAL_COLUMN_OFFSET}
-              />
-            )}
-
-            <div className="flex items-stretch gap-1.5">
-              <EvaluationBar
-                score={barScore}
-                orientation={nav.orientation}
-                pending={barScore === null && live.running}
-              />
-              <div className="min-w-0 flex-1">
-                <ChessBoard
-                  fen={displayFen}
-                  orientation={nav.orientation}
-                  lastMove={lastMove}
-                  bestMove={bestMoveArrow}
-                  badge={!exploring && currentMoveAnalysis ? currentMoveAnalysis.classification : null}
-                  onMove={handleBoardMove}
-                  theme={settings.boardTheme}
-                  showCoordinates={settings.showCoordinates}
-                  animations={settings.animations}
+          <div
+            ref={stageRef}
+            className="order-1 flex w-full min-h-0 flex-1 items-center justify-center overflow-hidden"
+          >
+            <div
+              className="w-full max-w-full"
+              style={boardSize !== null ? { width: boardSize + EVAL_COLUMN_WIDTH } : undefined}
+            >
+              {topStrip && (
+                <PlayerStrip
+                  {...topStrip}
+                  avatar={topStrip.avatar}
+                  clockSeconds={topStrip.clockSeconds}
+                  className={EVAL_COLUMN_OFFSET}
                 />
-              </div>
-            </div>
+              )}
 
-            {bottomStrip && (
-              <PlayerStrip
-                {...bottomStrip}
-                avatar={bottomStrip.avatar}
-                clockSeconds={bottomStrip.clockSeconds}
-                className={EVAL_COLUMN_OFFSET}
-              />
-            )}
+              <div
+                className="flex items-stretch gap-1.5"
+                style={boardSize !== null ? { height: boardSize } : undefined}
+              >
+                <EvaluationBar
+                  score={barScore}
+                  orientation={nav.orientation}
+                  pending={barScore === null && live.running}
+                />
+                <div className="min-w-0 flex-1">
+                  <ChessBoard
+                    fen={displayFen}
+                    orientation={nav.orientation}
+                    lastMove={lastMove}
+                    bestMove={bestMoveArrow}
+                    badge={!exploring && currentMoveAnalysis ? currentMoveAnalysis.classification : null}
+                    onMove={handleBoardMove}
+                    theme={settings.boardTheme}
+                    showCoordinates={settings.showCoordinates}
+                    animations={settings.animations}
+                  />
+                </div>
+              </div>
+
+              {bottomStrip && (
+                <PlayerStrip
+                  {...bottomStrip}
+                  avatar={bottomStrip.avatar}
+                  clockSeconds={bottomStrip.clockSeconds}
+                  className={EVAL_COLUMN_OFFSET}
+                />
+              )}
+            </div>
           </div>
 
           {exploring && (
-            <div className="panel border-brand-500/40 order-2 flex items-center gap-2 px-3 py-2 text-xs">
+            <div className="panel border-brand-500/40 order-2 flex shrink-0 items-center gap-2 px-3 py-2 text-xs">
               <span className="text-accent font-semibold">Exploring a variation</span>
               <span className="text-muted">
                 {exploration.length} move{exploration.length === 1 ? '' : 's'} from the game position
@@ -491,8 +490,8 @@ export function GameAnalysisPage() {
             </div>
           )}
 
-          <Panel flush className="order-3">
-            <div className="px-3 py-2.5">
+          <Panel flush className="order-3 shrink-0">
+            <div className="px-3 py-2">
               <GameControls nav={nav} totalMoves={parsed.moves.length} />
             </div>
           </Panel>
@@ -503,7 +502,7 @@ export function GameAnalysisPage() {
           desktop screen the whole workspace now fits without scrolling, and the
           move list keeps its own scroll instead of the page growing under it.
         */}
-        <div className="panel order-4 flex min-h-0 flex-col lg:sticky lg:top-[4.25rem] lg:order-none lg:max-h-[calc(100dvh-5.25rem)]">
+        <div className="panel order-4 flex min-h-0 flex-col lg:order-none lg:h-full">
           {showSettings ? (
             <>
               <div className="panel-header shrink-0">
@@ -522,8 +521,12 @@ export function GameAnalysisPage() {
             </>
           ) : (
             <>
-              {/* Feedback on the selected move stays visible above every tab. */}
-              <div className="shrink-0">
+              {/*
+                Feedback on the selected move stays visible above every tab, but
+                it is capped at a share of the rail so a long comment cannot push
+                the tabs and the move list off the bottom.
+              */}
+              <div className="scroll-thin shrink-0 lg:max-h-[38%] lg:overflow-y-auto">
                 <AnalysisPanel
                   move={exploring ? null : currentMoveAnalysis}
                   fenBefore={nav.index > 0 ? parsed.positions[nav.index - 1] : null}
@@ -606,7 +609,9 @@ export function GameAnalysisPage() {
 
 function AnalysisSkeleton({ scanned }: { scanned: number }) {
   return (
-    <div className="w-full">
+    /* Same flush, viewport-locked frame as the workspace, so nothing shifts when
+       the game arrives and the real layout takes over. */
+    <div className="page-flush page-fit w-full lg:h-full lg:min-h-0 lg:overflow-hidden">
       <div className="mb-3 flex items-center gap-2">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="ml-auto h-8 w-40" />
@@ -614,8 +619,8 @@ function AnalysisSkeleton({ scanned }: { scanned: number }) {
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-3">
           <div className="flex justify-center gap-3">
-            <Skeleton className="h-[min(72vh,780px)] w-7" />
-            <Skeleton className="aspect-square w-full max-w-[min(72vh,780px)]" />
+            <Skeleton className="h-[min(60vh,700px)] w-7" />
+            <Skeleton className="aspect-square w-full max-w-[min(60vh,700px)]" />
           </div>
           <Skeleton className="h-14" />
           <Skeleton className="h-36" />
