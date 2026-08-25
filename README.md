@@ -8,11 +8,13 @@ No backend, no API key, no account. Game data comes from the public
 [Chess.com Published-Data API](https://www.chess.com/news/view/published-data-api) and the
 engine is Stockfish 18 compiled to WebAssembly, running in a Web Worker on the user's machine.
 
-> This is an independent project. It is not affiliated with or endorsed by Chess.com, and
-> its accuracy and move-classification algorithms are its own (documented below) rather
-> than reproductions of theirs. The one exception is the move-quality badge artwork: those
-> icons are Chess.com's, so a game reviewed here reads the same way as the same game
-> reviewed there. See [Licence notes](#licence-notes).
+> This is an independent project. It is not affiliated with or endorsed by Chess.com. Its
+> accuracy and classification models are its own implementations (documented below) — no
+> Chess.com code or data is used — but the classification thresholds are deliberately
+> calibrated so a game reviewed here carries the same labels as the same game reviewed
+> there, and the move-quality badge artwork is redrawn from Chess.com's public icon set.
+> Evaluations come from a different Stockfish build at a different depth, so the two will
+> not agree on every move. See [Licence notes](#licence-notes).
 
 ---
 
@@ -132,8 +134,10 @@ result supplies both "evaluation before move `i`" and, negated into White's poin
 
 ## Scoring model
 
-Everything below is this project's own model. It is documented so it can be judged — and
-tuned — on its merits. **It is not Chess.com's algorithm and will not reproduce their numbers.**
+Everything below is this project's own implementation, documented so it can be judged — and
+tuned — on its merits. The **classification** thresholds are calibrated against Chess.com's
+Game Review so the labels line up; the **accuracy** model is not theirs and will not
+reproduce their numbers.
 
 ### Evaluation conventions
 
@@ -175,22 +179,45 @@ Per-move accuracies are combined two ways and averaged:
 - a **harmonic mean**, which refuses to let one catastrophic move be averaged away by a
   long tail of easy ones.
 
+### Expected points
+
+```
+expectedPoints(cp) = 50 + 50 * (2 / (1 + exp(-0.005 * cp)) - 1)
+```
+
+A second, deliberately steeper logistic — the axis **move classification** is measured on.
+The Lichess curve above is fitted to outcomes across a huge rating range, so it still gives
+the side a pawn down a generous share of the pie; classification needs the opposite bias.
+Judging moves on expected points rather than centipawns is what makes the same evaluation
+drop mean different things in different positions: half a pawn thrown away at equality is a
+real error, and the same half pawn thrown away while eight pawns down is noise. It also
+removes the need for a separate "hopeless" rule — a lost position has almost no expected
+points left to give away, so no further drop can reach the blunder band.
+
+The constant and the bands below are a **fit**, not a guess: they were grid-searched against
+Chess.com's own labels for a reviewed game, scored over the plies where the two models can
+meaningfully be compared. The optimum is a broad plateau — thousands of parameter sets score
+within one label of each other — so the shipped values are the roundest ones in the middle of
+it rather than the sharp maximum, which would be fitting noise. Re-run the fit against more
+games before moving them.
+
 ### Move classification
 
-Thresholds are expressed in **pawns** and every one is editable in the settings panel.
+Thresholds are expressed in **expected points given away** (0–100) and every one is editable
+in the settings panel. `version` guards the units: a settings object written by an older
+build is discarded rather than reinterpreted.
 
 ```js
 const thresholds = {
-  best: 0.05,               // loss at or below this is the engine's move
-  excellent: 0.15,
-  good: 0.35,
-  inaccuracy: 0.5,
-  mistake: 1.0,
-  blunder: 2.0,
-  missedWin: 2.0,           // advantage thrown away to count as a missed win
-  brilliantSacrifice: 1.5,  // material that must be offered for a brilliancy
+  version: 2,
+  excellent: 0.5,           // loss at or below this is excellent; up to `inaccuracy` is good
+  inaccuracy: 8,
+  mistake: 12,
+  blunder: 20,
+  missedWin: 10,            // points thrown away from a won position to count as a miss
+  greatMargin: 15,          // how far ahead of the alternatives the only move must be
+  brilliantSacrifice: 1.5,  // material (in pawns) that must be offered for a brilliancy
   bookDepth: 16,            // plies of theory to treat as book
-  hopeless: 6.0,            // below this the game is already lost
 };
 ```
 
@@ -200,19 +227,21 @@ Decision order — first match wins:
 2. **Forced** — there was exactly one legal move. No decision was made, so the evaluation
    swing that follows belongs to the position, not to the player.
 3. **Brilliant** — a genuine material sacrifice the engine endorses (see below).
-4. **Missed win** — a forced mate or decisive advantage thrown away, while the resulting
-   position is still playable. Throwing away a win *and* ending up lost is a blunder.
-5. **Blunder / Mistake / Inaccuracy** — by centipawn loss.
-6. **Best / Excellent / Good** — by how close the move is to the engine's choice.
+4. **Great** — the engine's own move in a position where every alternative it looked at was
+   clearly worse. Needs MultiPV ≥ 2; with one line there is no way to know an alternative
+   existed, so the label never fires.
+5. **Miss** — a forced mate or decisive advantage thrown away, while the resulting position
+   is still playable. Throwing away a win *and* ending up lost is a blunder.
+6. **Blunder / Mistake / Inaccuracy** — by expected points given away.
+7. **Best / Excellent / Good** — `best` is reserved for the engine's own first choice; a
+   move that merely costs nothing measurable is `excellent`, because the engine still had
+   something it liked more.
 
 **Repetition.** A game that ends by threefold repetition is scored `0.00`, however lopsided
 the material is — otherwise the graph ends by claiming someone is winning a drawn game, and
 the move that repeated is not recognised as the win it threw away. Repetition is a property
 of the game rather than of a position, so it is detected across the played position list
 (`terminalScoreInGame`) rather than from a FEN, which cannot show it.
-
-**Hopeless damping.** Once a side is worse than `hopeless` pawns, further drops can no
-longer be blunders. Losing a lost game more thoroughly is not a new error.
 
 **Brilliant** is deliberately hard to earn. All of these must hold: real material is
 offered (≥ `brilliantSacrifice`), the engine still rates the move within the `excellent`
@@ -292,10 +321,12 @@ while changing the depth correctly triggers a fresh pass.
 - React, chess.js and the app are split into separate chunks; the 7 MB engine is a static
   asset that is never bundled.
 
-Defaults are browser-friendly: depth 14 for the full-game pass, depth 20 for the position on
+Defaults are browser-friendly: depth 18 for the full-game pass, depth 20 for the position on
 screen, MultiPV 2, 64 MB hash, and as many threads as the browser allows. A 50-move game
-takes roughly 45–60 seconds on a modern laptop with threads available. All of it is
-adjustable in the settings panel.
+takes several minutes — call it five to ten on a laptop with a few threads available, and
+longer if the game ends in a forced-mate sequence, since those positions are the slowest to
+resolve. Dropping to depth 14 cuts that to well under a minute at the cost of some agreement
+with Chess.com's labels. All of it is adjustable in the settings panel.
 
 ---
 

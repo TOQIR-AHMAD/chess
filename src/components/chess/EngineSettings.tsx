@@ -110,16 +110,17 @@ export function EngineSettings({ onConfigChange }: { onConfigChange?: () => void
       {open === 'thresholds' && (
         <div className="space-y-3 px-4 py-3">
           <p className="text-muted text-[11px] leading-relaxed">
-            Thresholds are in pawns of evaluation lost. These are this app's own values — they are not
-            Chess.com's and can be tuned freely.
+            Thresholds are in <strong>expected points</strong> given away, not pawns — so the same
+            evaluation drop counts for more in a close game than in a decided one. The defaults are
+            tuned to match how Chess.com labels the same game.
           </p>
           <Slider
             label="Inaccuracy at"
             value={settings.thresholds.inaccuracy}
-            min={0.1}
-            max={1}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
+            min={1}
+            max={15}
+            step={0.5}
+            format={(v) => `${v.toFixed(1)} pts`}
             onChange={(inaccuracy) => {
               settings.updateThresholds({ inaccuracy });
               onConfigChange?.();
@@ -128,10 +129,10 @@ export function EngineSettings({ onConfigChange }: { onConfigChange?: () => void
           <Slider
             label="Mistake at"
             value={settings.thresholds.mistake}
-            min={0.5}
-            max={2}
-            step={0.05}
-            format={(v) => v.toFixed(2)}
+            min={5}
+            max={25}
+            step={0.5}
+            format={(v) => `${v.toFixed(1)} pts`}
             onChange={(mistake) => {
               settings.updateThresholds({ mistake });
               onConfigChange?.();
@@ -140,12 +141,25 @@ export function EngineSettings({ onConfigChange }: { onConfigChange?: () => void
           <Slider
             label="Blunder at"
             value={settings.thresholds.blunder}
-            min={1}
-            max={5}
-            step={0.1}
-            format={(v) => v.toFixed(2)}
+            min={10}
+            max={45}
+            step={1}
+            format={(v) => `${v.toFixed(0)} pts`}
             onChange={(blunder) => {
               settings.updateThresholds({ blunder });
+              onConfigChange?.();
+            }}
+          />
+          <Slider
+            label="Miss at"
+            hint="Expected points thrown away from a winning position before a move counts as a miss."
+            value={settings.thresholds.missedWin}
+            min={5}
+            max={30}
+            step={1}
+            format={(v) => `${v.toFixed(0)} pts`}
+            onChange={(missedWin) => {
+              settings.updateThresholds({ missedWin });
               onConfigChange?.();
             }}
           />

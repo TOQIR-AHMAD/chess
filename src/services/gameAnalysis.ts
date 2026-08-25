@@ -38,7 +38,7 @@ import { EngineAbortError } from '@/workers/stockfishWorker';
  *     exchanges no longer read as material offered up (and as brilliancies).
  * 7 — a draw by repetition scores 0.00, and the only legal move is "forced".
  */
-const ANALYSIS_VERSION = 7;
+const ANALYSIS_VERSION = 8;
 
 export interface AnalyseGameOptions {
   parsed: ParsedGame;
@@ -231,6 +231,7 @@ export async function analyseGame(options: AnalyseGameOptions): Promise<GameRevi
       evalAfter: after,
       centipawnLoss: classification.centipawnLoss,
       winProbLoss: classification.winProbLoss,
+      expectedPointsLoss: classification.expectedPointsLoss,
       accuracy: classification.accuracy,
       classification: classification.classification,
       bestMove,

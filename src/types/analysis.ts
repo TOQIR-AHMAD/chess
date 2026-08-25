@@ -56,6 +56,7 @@ export interface EngineConfig {
 
 export type MoveClassification =
   | 'brilliant'
+  | 'great'
   | 'best'
   | 'excellent'
   | 'good'
@@ -66,26 +67,34 @@ export type MoveClassification =
   | 'blunder'
   | 'missed';
 
+/**
+ * Cut-offs for `services/classification.ts`.
+ *
+ * Every band is expressed in **expected points given away** (0-100), the axis
+ * `utils/evaluation.ts` defines — not in centipawns. `version` is bumped whenever
+ * the meaning of these numbers changes, so a settings object written by an older
+ * build is discarded rather than reinterpreted under the new units.
+ */
 export interface ClassificationThresholds {
-  /** Centipawn loss at or above which a move is an inaccuracy. */
+  /** Schema version for the units below. */
+  version: number;
+  /** Expected points lost at or above which a move is an inaccuracy. */
   inaccuracy: number;
   mistake: number;
   blunder: number;
-  /** Loss below this counts as "best". */
-  best: number;
+  /** Loss at or below this still counts as "excellent"; anything up to `inaccuracy` is good. */
   excellent: number;
-  good: number;
   /**
-   * A winning continuation worth at least this much (in pawns) that the player
-   * failed to play flags the move as a missed opportunity.
+   * Expected points the player must throw away, while holding a decisive
+   * advantage, for the move to be flagged as a missed opportunity.
    */
   missedWin: number;
+  /** How far ahead of the alternatives the only good move must be to be "great". */
+  greatMargin: number;
   /** Minimum material (in pawns) that must be given up for a brilliant move. */
   brilliantSacrifice: number;
   /** Plies to consider "book" when the line matches the opening database. */
   bookDepth: number;
-  /** Below this evaluation the position is lost anyway, so drops are not punished. */
-  hopeless: number;
 }
 
 /** Per-ply analysis record produced by `services/gameAnalysis.ts`. */
@@ -103,6 +112,8 @@ export interface MoveAnalysis {
   centipawnLoss: number;
   /** Win-probability drop for the mover, in percentage points (0-100). */
   winProbLoss: number;
+  /** Expected points the mover gave away (0-100) — the axis classification uses. */
+  expectedPointsLoss: number;
   /** Accuracy score for this move (0-100). */
   accuracy: number;
   classification: MoveClassification;

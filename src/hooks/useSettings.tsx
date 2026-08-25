@@ -7,7 +7,19 @@ import { useLocalStorage } from './useLocalStorage';
 export type BoardTheme = 'classic' | 'slate' | 'walnut' | 'ocean';
 export type ThemeMode = 'dark' | 'light';
 
+/**
+ * Bumped when the *meaning* of the scoring settings changes, not merely their
+ * defaults. A stored engine/threshold pair from an older build is then dropped
+ * rather than merged: the thresholds changed units between versions, and a depth
+ * carried over from an old default would silently pin the review shallower than
+ * the thresholds are calibrated for. Presentation settings — theme, board, the
+ * toggles — are untouched by a bump.
+ */
+const SCORING_SETTINGS_VERSION = 2;
+
 export interface Settings {
+  /** See `SCORING_SETTINGS_VERSION`. */
+  scoringVersion?: number;
   theme: ThemeMode;
   boardTheme: BoardTheme;
   showCoordinates: boolean;
@@ -19,6 +31,7 @@ export interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
+  scoringVersion: SCORING_SETTINGS_VERSION,
   theme: 'light',
   boardTheme: 'classic',
   showCoordinates: true,
@@ -52,15 +65,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   });
 
   // Merge with defaults so a settings object written by an older build still works.
-  const settings = useMemo<Settings>(
-    () => ({
+  const settings = useMemo<Settings>(() => {
+    const scoringIsCurrent = stored.scoringVersion === SCORING_SETTINGS_VERSION;
+    return {
       ...DEFAULT_SETTINGS,
       ...stored,
-      engine: sanitiseEngineConfig({ ...DEFAULT_ENGINE_CONFIG, ...stored.engine }),
-      thresholds: { ...DEFAULT_THRESHOLDS, ...stored.thresholds },
-    }),
-    [stored],
-  );
+      scoringVersion: SCORING_SETTINGS_VERSION,
+      engine: scoringIsCurrent
+        ? sanitiseEngineConfig({ ...DEFAULT_ENGINE_CONFIG, ...stored.engine })
+        : DEFAULT_ENGINE_CONFIG,
+      thresholds: scoringIsCurrent
+        ? { ...DEFAULT_THRESHOLDS, ...stored.thresholds }
+        : DEFAULT_THRESHOLDS,
+    };
+  }, [stored]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', settings.theme === 'dark');
@@ -71,28 +89,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.theme]);
 
+  // Every writer starts from the *merged* settings, never from the raw stored blob.
+  // Writing `{ ...stored, ...patch }` would resurrect values that the version check
+  // above had just discarded, and leave the object unversioned for the next load.
   const update = useCallback(
-    (patch: Partial<Settings>) => setStored((prev) => ({ ...prev, ...patch })),
-    [setStored],
+    (patch: Partial<Settings>) => setStored({ ...settings, ...patch }),
+    [setStored, settings],
   );
 
   const updateEngine = useCallback(
     (patch: Partial<EngineConfig>) =>
-      setStored((prev) => ({ ...prev, engine: sanitiseEngineConfig({ ...prev.engine, ...patch }) })),
-    [setStored],
+      setStored({ ...settings, engine: sanitiseEngineConfig({ ...settings.engine, ...patch }) }),
+    [setStored, settings],
   );
 
   const updateThresholds = useCallback(
     (patch: Partial<ClassificationThresholds>) =>
-      setStored((prev) => ({ ...prev, thresholds: { ...prev.thresholds, ...patch } })),
-    [setStored],
+      setStored({ ...settings, thresholds: { ...settings.thresholds, ...patch } }),
+    [setStored, settings],
   );
 
   const reset = useCallback(() => setStored({ ...DEFAULT_SETTINGS, theme: settings.theme }), [setStored, settings.theme]);
 
   const toggleTheme = useCallback(
-    () => setStored((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' })),
-    [setStored],
+    () => setStored({ ...settings, theme: settings.theme === 'dark' ? 'light' : 'dark' }),
+    [setStored, settings],
   );
 
   const value = useMemo<SettingsContextValue>(

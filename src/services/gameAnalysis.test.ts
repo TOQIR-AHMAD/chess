@@ -67,8 +67,9 @@ const THRESHOLDS = { ...DEFAULT_THRESHOLDS, bookDepth: 0 };
 beforeEach(() => {
   searchedFens = [];
   alternativeBest = {};
-  // Side-to-move scores: +20, −20, +15, −300, +600 → White POV +20, +20, +15, +300, −600
-  scriptedScores = [20, -20, 15, -300, 600];
+  // Side-to-move scores: +20, −20, +15, +10, +600 → White POV +20, +20, +15, −10, +600.
+  // The last step is the one under test: a level position that collapses to +6.00.
+  scriptedScores = [20, -20, 15, 10, 600];
   window.localStorage.clear();
 });
 
@@ -85,7 +86,7 @@ describe('analyseGame', () => {
     expect(review.evaluations[0]).toEqual({ type: 'cp', value: 20 });
     // Position 1 has Black to move and the engine said −20 for Black → +20 for White.
     expect(review.evaluations[1]).toEqual({ type: 'cp', value: 20 });
-    expect(review.evaluations[3]).toEqual({ type: 'cp', value: 300 });
+    expect(review.evaluations[3]).toEqual({ type: 'cp', value: -10 });
     // Position 4 has White to move and the engine said +600 → +600 for White.
     expect(review.evaluations[4]).toEqual({ type: 'cp', value: 600 });
   });
@@ -105,10 +106,10 @@ describe('analyseGame', () => {
 
   it('classifies the losing move and leaves the rest alone', async () => {
     const review = await analyseGame({ parsed: GAME, engine: ENGINE, thresholds: THRESHOLDS });
-    // Black's 2...Nc6 takes the evaluation from +3.00 to +6.00 for White.
+    // Black's 2...Nc6 takes the evaluation from level to +6.00 for White.
     const blunder = review.moves[3];
     expect(blunder.color).toBe('black');
-    expect(blunder.centipawnLoss).toBe(300);
+    expect(blunder.centipawnLoss).toBe(610);
     expect(blunder.classification).toBe('blunder');
     expect(review.moves.slice(0, 3).every((move) => move.classification === 'best')).toBe(true);
   });
@@ -222,6 +223,6 @@ describe('analysisKey and the review cache', () => {
     const restored = getCachedReview(key);
     expect(restored?.moves).toHaveLength(review.moves.length);
     expect(restored?.white.accuracy).toBe(review.white.accuracy);
-    expect(restored?.evaluations[3]).toEqual({ type: 'cp', value: 300 });
+    expect(restored?.evaluations[3]).toEqual({ type: 'cp', value: -10 });
   });
 });

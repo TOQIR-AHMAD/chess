@@ -21,15 +21,25 @@ export interface EngineStatus {
 }
 
 export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
-  // Depth 14 is deep enough for reliable blunder detection while keeping a typical
-  // game's full pass inside a minute or so.
-  depth: 14,
+  // Depth 18 is the shallowest setting whose evaluations line up with the review
+  // sites players compare against; below it the engine's "best move" starts to
+  // disagree with theirs often enough to change the labels. It is not cheap — a
+  // full pass runs into minutes, and positions inside a forced-mate sequence are
+  // the slowest of all — so the setting is prominent in the panel for anyone who
+  // would rather have the old depth-14 speed.
+  depth: 18,
   liveDepth: 20,
   // Use the cores the browser actually allows. `maxThreads()` returns 1 unless the
   // page is cross-origin isolated, so this is safe everywhere.
   threads: maxThreads(),
   hash: 64,
-  moveTimeMs: 0,
+  // Depth alone is not a usable limit at 18. Most positions reach it in well under
+  // a second, but a position inside a forced-mate sequence — a king being walked
+  // down, where every line transposes — can search for minutes without the depth
+  // counter moving, and a single such position stalls the whole pass. The cap
+  // bounds the worst case; ordinary positions never reach it, so it costs nothing
+  // where it is not needed. 0 restores pure depth-only search.
+  moveTimeMs: 2500,
   multiPv: 2,
 };
 

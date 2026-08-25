@@ -169,11 +169,11 @@
  *
  * The move-quality values are the face colours of the badges in
  * `classificationArt.ts`, so the label, the pill and the badge beside a move are
- * always the same colour. `missed` is the one exception: its badge shares the
- * inaccuracy gold, and a darker gold here keeps the two apart in the move list.
+ * always the same colour.
  */
 :root {
   --cls-brilliant: #26c2a3;
+  --cls-great: #5c8bb0;
   --cls-best: #81b64c;
   --cls-excellent: #81b64c;
   --cls-good: #95b776;
@@ -182,7 +182,7 @@
   --cls-inaccuracy: #f7c631;
   --cls-mistake: #ffa459;
   --cls-blunder: #fa412d;
-  --cls-missed: #dbac16;
+  --cls-missed: #ff7769;
 
   --result-win: #16a34a;
   --result-draw: #64748b;
@@ -771,6 +771,9 @@
   .cls-brilliant {
     color: var(--cls-brilliant);
   }
+  .cls-great {
+    color: var(--cls-great);
+  }
   .cls-best {
     color: var(--cls-best);
   }
@@ -800,6 +803,7 @@
   }
 
   .badge-brilliant,
+  .badge-great,
   .badge-best,
   .badge-excellent,
   .badge-good,
@@ -815,6 +819,9 @@
   }
   .badge-brilliant {
     --badge-tint: var(--cls-brilliant);
+  }
+  .badge-great {
+    --badge-tint: var(--cls-great);
   }
   .badge-best {
     --badge-tint: var(--cls-best);

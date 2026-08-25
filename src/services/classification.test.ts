@@ -39,37 +39,46 @@ describe('classifyMove — loss bands', () => {
     const result = classifyMove(input());
     expect(result.classification).toBe('best');
     expect(result.isTopEngineMove).toBe(true);
-    expect(result.centipawnLoss).toBe(0);
+    expect(result.expectedPointsLoss).toBe(0);
   });
 
   it('marks a near-perfect alternative as excellent', () => {
-    const result = classifyMove(
-      input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(9) }),
-    );
+    const result = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(18) }));
     expect(result.classification).toBe('excellent');
-    expect(result.centipawnLoss).toBe(11);
+    expect(result.expectedPointsLoss).toBeLessThanOrEqual(DEFAULT_THRESHOLDS.excellent);
   });
 
   it('marks a small drop as good', () => {
-    const result = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(-15) }));
+    const result = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(0) }));
     expect(result.classification).toBe('good');
   });
 
-  it('marks a 0.6 pawn drop as an inaccuracy', () => {
-    const result = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(-40) }));
+  it('marks a drop past the inaccuracy band as an inaccuracy', () => {
+    const result = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(-60) }));
     expect(result.classification).toBe('inaccuracy');
-    expect(result.centipawnLoss).toBe(60);
+    expect(result.expectedPointsLoss).toBeGreaterThanOrEqual(DEFAULT_THRESHOLDS.inaccuracy);
   });
 
-  it('marks a 1.5 pawn drop as a mistake', () => {
-    const result = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(-130) }));
+  it('marks a larger drop as a mistake', () => {
+    const result = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(-90) }));
     expect(result.classification).toBe('mistake');
+    expect(result.expectedPointsLoss).toBeGreaterThanOrEqual(DEFAULT_THRESHOLDS.mistake);
   });
 
-  it('marks a 4 pawn drop as a blunder', () => {
+  it('marks a decisive swing as a blunder', () => {
     const result = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalBefore: cp(140), evalAfter: cp(-270) }));
     expect(result.classification).toBe('blunder');
     expect(result.centipawnLoss).toBe(410);
+  });
+
+  it('scales the same centipawn drop by how much was left to lose', () => {
+    // A 400cp drop starting from equality is a blunder...
+    const fromEven = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalBefore: cp(0), evalAfter: cp(-400) }));
+    // ...but the identical drop from an already lost position is not a new error.
+    const fromLost = classifyMove(input({ uci: 'b1c3', san: 'Nc3', evalBefore: cp(-600), evalAfter: cp(-1000) }));
+    expect(fromEven.centipawnLoss).toBe(fromLost.centipawnLoss);
+    expect(fromEven.classification).toBe('blunder');
+    expect(fromLost.classification).toBe('good');
   });
 
   it('reads the swing from Black’s point of view too', () => {
@@ -77,12 +86,12 @@ describe('classifyMove — loss bands', () => {
     const result = classifyMove(
       input({ mover: 'black', evalBefore: cp(-140), evalAfter: cp(-270), uci: 'g8f6', bestMove: 'g8f6' }),
     );
-    expect(result.centipawnLoss).toBe(0);
+    expect(result.expectedPointsLoss).toBe(0);
     expect(result.classification).toBe('best');
   });
 
   it('honours custom thresholds', () => {
-    const strict = { ...DEFAULT_THRESHOLDS, inaccuracy: 0.1, mistake: 0.2, blunder: 0.3 };
+    const strict = { ...DEFAULT_THRESHOLDS, inaccuracy: 1, mistake: 2, blunder: 3 };
     const result = classifyMove(
       input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(-20), thresholds: strict }),
     );
@@ -102,8 +111,9 @@ describe('classifyMove — hopeless positions', () => {
     const result = classifyMove(
       input({ uci: 'b1c3', san: 'Nc3', evalBefore: cp(-800), evalAfter: cp(-1500) }),
     );
-    // A 7-pawn drop, but from an already lost position.
-    expect(result.classification).toBe('inaccuracy');
+    // A 7-pawn drop, but from a position that was already worth almost nothing.
+    expect(result.expectedPointsLoss).toBeLessThan(DEFAULT_THRESHOLDS.inaccuracy);
+    expect(['excellent', 'good']).toContain(result.classification);
   });
 
   it('still calls it a blunder from a merely bad position', () => {
@@ -167,7 +177,7 @@ describe('classifyMove — brilliant moves', () => {
 
   it('is not brilliant when no material is given up', () => {
     const result = classifyMove(input({ evalBefore: cp(80), evalAfter: cp(420), secondBestEval: cp(20) }));
-    expect(result.classification).toBe('best');
+    expect(result.classification).not.toBe('brilliant');
   });
 
   it('is not brilliant when the engine does not endorse it', () => {
@@ -235,6 +245,30 @@ describe('classifyMove — brilliant moves', () => {
   });
 });
 
+describe('classifyMove — great moves', () => {
+  it('flags the engine move when every alternative was far worse', () => {
+    const result = classifyMove(input({ evalAfter: cp(20), secondBestEval: cp(-400) }));
+    expect(result.classification).toBe('great');
+  });
+
+  it('is only best when the alternatives were nearly as good', () => {
+    const result = classifyMove(input({ evalAfter: cp(20), secondBestEval: cp(10) }));
+    expect(result.classification).toBe('best');
+  });
+
+  it('needs a second line to compare against', () => {
+    const result = classifyMove(input({ evalAfter: cp(20), secondBestEval: null }));
+    expect(result.classification).toBe('best');
+  });
+
+  it('does not apply to a move the engine did not choose', () => {
+    const result = classifyMove(
+      input({ uci: 'b1c3', san: 'Nc3', evalAfter: cp(20), secondBestEval: cp(-400) }),
+    );
+    expect(result.classification).not.toBe('great');
+  });
+});
+
 describe('accuracy scoring', () => {
   function move(overrides: Partial<MoveAnalysis>): MoveAnalysis {
     return {
@@ -247,6 +281,7 @@ describe('accuracy scoring', () => {
       evalAfter: cp(20),
       centipawnLoss: 0,
       winProbLoss: 0,
+      expectedPointsLoss: 0,
       accuracy: 100,
       classification: 'best',
       bestMove: 'e2e4',
@@ -314,6 +349,7 @@ describe('explainMove', () => {
     evalAfter: cp(-270),
     centipawnLoss: 410,
     winProbLoss: 38,
+    expectedPointsLoss: 58,
     accuracy: 24,
     classification: 'blunder',
     bestMove: 'd1d2',

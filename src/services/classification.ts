@@ -9,6 +9,8 @@ import type { Color } from '@/types/game';
 import {
   centipawnLoss,
   clampedCp,
+  expectedPoints,
+  expectedPointsLoss,
   formatEval,
   moveAccuracy,
   toMoverPov,
@@ -19,23 +21,26 @@ import { formatSanLine, sacrificedMaterial } from '@/utils/chess';
 /**
  * Move classification.
  *
- * Thresholds are expressed in **pawns** so they read the way players talk, and
- * every one of them is configurable from the analysis settings panel. The scheme
- * below is our own: it is inspired by how modern review tools present a game, but
- * the cut-offs, the ordering and the brilliant/missed heuristics are defined here
- * and documented in README.md rather than copied from any particular site.
+ * Moves are judged on **expected points given away** (see `utils/evaluation.ts`),
+ * not on raw centipawn loss. That distinction is the whole model: half a pawn
+ * dropped at equality is a real error, and the same half pawn dropped while
+ * already eight pawns down is not — a centipawn threshold cannot tell those apart
+ * and ends up calling every move in a decided game a blunder.
+ *
+ * The bands below are set to line up with how Chess.com's Game Review labels the
+ * same game, so a game reviewed here reads the way players expect. They are still
+ * fully configurable from the analysis settings panel. See README.md.
  */
 export const DEFAULT_THRESHOLDS: ClassificationThresholds = {
-  inaccuracy: 0.5,
-  mistake: 1.0,
-  blunder: 2.0,
-  best: 0.05,
-  excellent: 0.15,
-  good: 0.35,
-  missedWin: 2.0,
+  version: 2,
+  inaccuracy: 8,
+  mistake: 12,
+  blunder: 20,
+  excellent: 0.5,
+  missedWin: 10,
+  greatMargin: 15,
   brilliantSacrifice: 1.5,
   bookDepth: 16,
-  hopeless: 6.0,
 };
 
 export interface ClassificationMeta {
@@ -53,6 +58,12 @@ export const CLASSIFICATION_META: Record<MoveClassification, ClassificationMeta>
     color: 'cls-brilliant',
     badge: 'badge-brilliant',
     description: 'A sound sacrifice the engine confirms.',
+  },
+  great: {
+    label: 'Great',
+    color: 'cls-great',
+    badge: 'badge-great',
+    description: 'The only move that held the position.',
   },
   best: {
     label: 'Best',
@@ -103,7 +114,7 @@ export const CLASSIFICATION_META: Record<MoveClassification, ClassificationMeta>
     description: 'A serious error that changes the outcome.',
   },
   missed: {
-    label: 'Missed win',
+    label: 'Miss',
     color: 'cls-missed',
     badge: 'badge-missed',
     description: 'A winning continuation was available.',
@@ -117,6 +128,7 @@ export const CLASSIFICATION_META: Record<MoveClassification, ClassificationMeta>
  */
 export const CLASSIFICATION_ORDER: MoveClassification[] = [
   'brilliant',
+  'great',
   'best',
   'excellent',
   'good',
@@ -152,27 +164,33 @@ export interface ClassificationOutput {
   classification: MoveClassification;
   centipawnLoss: number;
   winProbLoss: number;
+  expectedPointsLoss: number;
   accuracy: number;
   sacrificedMaterial: number;
   isTopEngineMove: boolean;
 }
 
-const pawnsToCp = (pawns: number) => Math.round(pawns * 100);
+/** Expected points at or above which a side is considered to be winning. */
+const DECISIVE_POINTS = 80;
 
 /**
  * Classify a single move.
  *
  * Decision order (first match wins):
- *   1. Book        — the position is still inside a known ECO line.
- *   2. Forced      — there was nothing else to play.
- *   3. Brilliant   — a genuine material sacrifice that the engine endorses.
- *   4. Missed win  — a forced mate or decisive advantage was thrown away, but the
- *                    resulting position is not itself lost.
- *   5. Blunder / Mistake / Inaccuracy — by centipawn loss.
- *   6. Best / Excellent / Good — by how close the move is to the engine's choice.
+ *   1. Book       — the position is still inside a known ECO line.
+ *   2. Forced     — there was nothing else to play.
+ *   3. Brilliant  — a genuine material sacrifice that the engine endorses.
+ *   4. Great      — the one move that held the position, with every alternative
+ *                   clearly worse.
+ *   5. Miss       — a forced mate or decisive advantage was thrown away, but the
+ *                   resulting position is not itself lost.
+ *   6. Blunder / Mistake / Inaccuracy — by expected points given away.
+ *   7. Best / Excellent / Good — the engine's own move, then by the same axis.
  *
- * "Hopeless" damping: once a side is worse than `thresholds.hopeless` pawns, further
- * drops can no longer be blunders — losing a lost game more thoroughly is not a new error.
+ * Everything from step 5 down is measured in expected points rather than
+ * centipawns, which is what keeps a decided game from filling up with blunders:
+ * a side already down a rook has almost no expected points left to lose, so no
+ * further drop can cross the blunder band.
  */
 export function classifyMove(input: ClassificationInput): ClassificationOutput {
   const { thresholds, mover } = input;
@@ -187,12 +205,17 @@ export function classifyMove(input: ClassificationInput): ClassificationOutput {
   const winProbLoss = Math.max(0, winBefore - winAfter);
   const accuracy = moveAccuracy(winBefore, winAfter);
 
+  const pointsLoss = expectedPointsLoss(input.evalBefore, input.evalAfter, moverColor);
+  const pointsBefore = expectedPoints(toMoverPov(input.evalBefore, moverColor));
+  const pointsAfter = expectedPoints(toMoverPov(input.evalAfter, moverColor));
+
   const isTopEngineMove = input.bestMove !== null && input.bestMove === input.uci;
   const sacrifice = sacrificedMaterial(input.fenBefore, [input.uci, ...playedContinuation(input)], 6);
 
   const base: Omit<ClassificationOutput, 'classification'> = {
     centipawnLoss: loss,
     winProbLoss,
+    expectedPointsLoss: pointsLoss,
     accuracy,
     sacrificedMaterial: sacrifice,
     isTopEngineMove,
@@ -204,25 +227,26 @@ export function classifyMove(input: ClassificationInput): ClassificationOutput {
   // evaluation swing that follows is the position's doing, not theirs.
   if (input.legalMoveCount === 1) return { ...base, classification: 'forced' };
 
-  if (isBrilliant(input, { loss, moverBefore, moverAfter, sacrifice })) {
+  if (isBrilliant(input, { pointsLoss, moverBefore, moverAfter, sacrifice })) {
     return { ...base, classification: 'brilliant' };
   }
 
-  if (isMissedWin(input, { loss, moverBefore, moverAfter })) {
+  if (isGreat(input, { pointsLoss, isTopEngineMove })) {
+    return { ...base, classification: 'great' };
+  }
+
+  if (isMissedWin(input, { pointsLoss, pointsBefore, pointsAfter })) {
     return { ...base, classification: 'missed' };
   }
 
-  const hopelessCp = pawnsToCp(thresholds.hopeless);
-  const alreadyLost = moverBefore <= -hopelessCp;
+  if (pointsLoss >= thresholds.blunder) return { ...base, classification: 'blunder' };
+  if (pointsLoss >= thresholds.mistake) return { ...base, classification: 'mistake' };
+  if (pointsLoss >= thresholds.inaccuracy) return { ...base, classification: 'inaccuracy' };
 
-  if (!alreadyLost) {
-    if (loss >= pawnsToCp(thresholds.blunder)) return { ...base, classification: 'blunder' };
-    if (loss >= pawnsToCp(thresholds.mistake)) return { ...base, classification: 'mistake' };
-  }
-  if (loss >= pawnsToCp(thresholds.inaccuracy)) return { ...base, classification: 'inaccuracy' };
-
-  if (isTopEngineMove || loss <= pawnsToCp(thresholds.best)) return { ...base, classification: 'best' };
-  if (loss <= pawnsToCp(thresholds.excellent)) return { ...base, classification: 'excellent' };
+  // "Best" is reserved for the engine's own first choice. A move that merely costs
+  // nothing measurable is excellent — the engine still had something it liked more.
+  if (isTopEngineMove) return { ...base, classification: 'best' };
+  if (pointsLoss <= thresholds.excellent) return { ...base, classification: 'excellent' };
   return { ...base, classification: 'good' };
 }
 
@@ -236,7 +260,7 @@ function playedContinuation(input: ClassificationInput): string[] {
 
 function isBrilliant(
   input: ClassificationInput,
-  ctx: { loss: number; moverBefore: number; moverAfter: number; sacrifice: number },
+  ctx: { pointsLoss: number; moverBefore: number; moverAfter: number; sacrifice: number },
 ): boolean {
   const { thresholds } = input;
   // A forced move is not a brilliancy, it is the only thing on the board.
@@ -244,7 +268,7 @@ function isBrilliant(
   // Real material must be given up, judged after the forced recaptures.
   if (ctx.sacrifice < thresholds.brilliantSacrifice) return false;
   // The engine has to endorse it: near-best, and not merely the least-bad option.
-  if (ctx.loss > pawnsToCp(thresholds.excellent)) return false;
+  if (ctx.pointsLoss > thresholds.excellent) return false;
   // The sacrifice has to keep the game at least balanced.
   if (ctx.moverAfter < -50) return false;
   // Sacrifices while already completely winning are just simplification.
@@ -258,26 +282,45 @@ function isBrilliant(
   return true;
 }
 
+/**
+ * "Great" is for the move that was *needed*: the engine's own choice, in a position
+ * where every alternative it looked at was clearly worse. Without a second line to
+ * compare against (MultiPV 1) there is no way to know an alternative existed, so the
+ * label simply never fires.
+ */
+function isGreat(input: ClassificationInput, ctx: { pointsLoss: number; isTopEngineMove: boolean }): boolean {
+  const { thresholds } = input;
+  if (!ctx.isTopEngineMove) return false;
+  if (input.legalMoveCount <= 1) return false;
+  if (!input.secondBestEval) return false;
+  if (ctx.pointsLoss > thresholds.excellent) return false;
+
+  const moverColor: 'w' | 'b' = input.mover === 'white' ? 'w' : 'b';
+  const played = expectedPoints(toMoverPov(input.evalAfter, moverColor));
+  const second = expectedPoints(toMoverPov(input.secondBestEval, moverColor));
+  return played - second >= thresholds.greatMargin;
+}
+
+/**
+ * A miss is an opportunity declined: the player held a decisive advantage — or an
+ * outright forced mate — and gave a real share of it back while still standing well
+ * enough that the game is not lost. Measuring the giveaway in expected points is
+ * what stops "mate in 11 became merely winning by five pawns" from counting: the
+ * position was worth ~100 points before and ~96 after, so nothing was really lost.
+ */
 function isMissedWin(
   input: ClassificationInput,
-  ctx: { loss: number; moverBefore: number; moverAfter: number },
+  ctx: { pointsLoss: number; pointsBefore: number; pointsAfter: number },
 ): boolean {
   const { thresholds } = input;
-  const moverColor: 'w' | 'b' = input.mover === 'white' ? 'w' : 'b';
-  const before = toMoverPov(input.evalBefore, moverColor);
-  const after = toMoverPov(input.evalAfter, moverColor);
-
-  const hadForcedMate = before.type === 'mate' && before.value > 0;
-  const keptForcedMate = after.type === 'mate' && after.value > 0;
 
   // The resulting position must still be playable — throwing a win away *and*
   // ending up lost is a blunder, not a missed opportunity.
-  if (ctx.moverAfter < -150) return false;
+  if (ctx.pointsAfter < 35) return false;
+  // There has to have been something to miss.
+  if (ctx.pointsBefore < DECISIVE_POINTS) return false;
 
-  if (hadForcedMate && !keptForcedMate && ctx.loss >= pawnsToCp(thresholds.inaccuracy)) return true;
-
-  const winCp = pawnsToCp(thresholds.missedWin);
-  return ctx.moverBefore >= winCp && ctx.moverAfter < winCp * 0.75 && ctx.loss >= pawnsToCp(thresholds.mistake);
+  return ctx.pointsLoss >= thresholds.missedWin;
 }
 
 /**
@@ -309,6 +352,11 @@ export function explainMove(
         analysis.sacrificedMaterial === 1 ? '' : 's'
       } of material, and the engine confirms it works: the evaluation moves from ${before} to ${after}.${
         line ? ` Main line: ${line}.` : ''
+      }`;
+
+    case 'great':
+      return `The move the position demanded — the engine's choice, and every alternative it looked at was clearly worse. Evaluation ${before} → ${after}.${
+        line ? ` It continues ${line}.` : ''
       }`;
 
     case 'best':
@@ -360,6 +408,7 @@ export function explainMove(
 export function emptyCounts(): Record<MoveClassification, number> {
   return {
     brilliant: 0,
+    great: 0,
     best: 0,
     excellent: 0,
     good: 0,

@@ -70,6 +70,49 @@ export function winProbability(score: Score): number {
 }
 
 /**
+ * Steepness of the expected-points curve used for move classification.
+ *
+ * Sharper than `winProbability`'s Lichess-fitted constant. That model is fitted to
+ * *outcomes* across a huge rating range, so it still gives the side a pawn down a
+ * generous share of the pie; classification needs the opposite bias — once a game
+ * is decided, further evaluation drops should stop registering as new errors.
+ *
+ * The value is a fit, not a guess: it and the bands in `DEFAULT_THRESHOLDS` were
+ * grid-searched against Chess.com's own labels for a reviewed game, scored on the
+ * plies where the two can meaningfully be compared. The optimum is a broad plateau
+ * — thousands of parameter sets score within one label of each other — so these are
+ * the roundest values in the middle of it rather than the sharp maximum, which
+ * would be fitting noise.
+ */
+export const EXPECTED_POINTS_K = 0.005;
+
+/**
+ * Expected points (0-100) for the side the score belongs to.
+ *
+ * This is the axis every move classification is measured on: a move is judged by
+ * how many expected points it gave away, not by how many centipawns. The two agree
+ * around equality and diverge exactly where they should — 0.5 pawns thrown away at
+ * equality is a real error, the same 0.5 pawns thrown away while eight pawns down
+ * is noise.
+ */
+export function expectedPoints(score: Score): number {
+  if (score.type === 'mate') {
+    if (score.value === 0) return 0; // side to move has been mated
+    return score.value > 0 ? 100 : 0;
+  }
+  const cp = Math.max(-EVAL_CLAMP_CP, Math.min(EVAL_CLAMP_CP, score.value));
+  const raw = 50 + 50 * (2 / (1 + Math.exp(-EXPECTED_POINTS_K * cp)) - 1);
+  return Math.max(0, Math.min(100, raw));
+}
+
+/** Expected points given away by the mover, in points (0-100). */
+export function expectedPointsLoss(before: Score, after: Score, mover: 'w' | 'b'): number {
+  const b = expectedPoints(toMoverPov(before, mover));
+  const a = expectedPoints(toMoverPov(after, mover));
+  return Math.max(0, b - a);
+}
+
+/**
  * Accuracy for a single move, derived from how much win probability it gave away.
  *
  * `103.1668 * exp(-0.04354 * drop) - 3.1669`, clamped to [0, 100] — an exponential
