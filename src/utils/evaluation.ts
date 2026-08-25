@@ -1,5 +1,5 @@
 import type { Score } from '@/types/analysis';
-import { sideToMove, terminalState } from './chess';
+import { repetitionCount, sideToMove, terminalState } from './chess';
 
 /**
  * Evaluation maths.
@@ -158,6 +158,22 @@ export function terminalScore(fen: string): Score | null {
   if (state !== 'checkmate') return { type: 'cp', value: 0 };
   // The side to move has been mated, so the other side is the winner.
   return { type: 'mate', value: sideToMove(fen) === 'w' ? -1 : 1 };
+}
+
+/**
+ * Score of a position in the context of the game that reached it.
+ *
+ * Identical to `terminalScore` except that it can also see a draw by repetition,
+ * which no single FEN can show. A game that ends by repetition is a draw however
+ * lopsided the material is, and the evaluation has to say so: showing "Black is
+ * winning by six pawns" under a drawn game is the graph contradicting the result.
+ */
+export function terminalScoreInGame(positions: string[], index: number): Score | null {
+  const fen = positions[index];
+  if (!fen) return null;
+  const direct = terminalScore(fen);
+  if (direct) return direct;
+  return repetitionCount(positions, index) >= 3 ? { type: 'cp', value: 0 } : null;
 }
 
 /** Difference between two White-relative scores, from the mover's point of view. */

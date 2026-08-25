@@ -126,4 +126,31 @@ describe('sacrificedMaterial', () => {
     expect(sacrificedMaterial(START_FEN, [])).toBe(0);
     expect(sacrificedMaterial(START_FEN, ['a1a8'])).toBe(0);
   });
+
+  it('counts material that is still missing when the line runs out', () => {
+    // Rf1xf7 and the king takes: White is a rook down for a pawn four plies later.
+    const fen = '4k3/5p2/8/8/8/8/6R1/5R1K w - - 0 1';
+    expect(sacrificedMaterial(fen, ['f1f7', 'e8f7', 'g2g7', 'f7g7'], 6)).toBe(4);
+  });
+
+  /*
+   * The two cases below come from a real game (chess.com 173508802494) where an
+   * ordinary developing move and an ordinary recapture were both reported as
+   * sacrifices, and therefore as brilliancies. Both failed the same way: the
+   * material balance was read mid-exchange, before the answer to a capture.
+   */
+  it('does not call a developing move a sacrifice when the line trades later', () => {
+    // 3. Bc4 in the King's Pawn. The engine line reaches ...Nxc4 at the edge of
+    // the window, but dxc4 wins the piece straight back on the very next ply.
+    const fen = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5Q2/PPPP1PPP/RNB1KBNR w KQkq - 2 3';
+    const pv = ['f1c4', 'g8f6', 'g1e2', 'c6a5', 'd2d3', 'a5c4', 'd3c4'];
+    expect(sacrificedMaterial(fen, pv, 6)).toBe(0);
+  });
+
+  it('does not call a recapture a sacrifice', () => {
+    // 6...Rxf7 takes the knight back; Bxf7+ Kxf7 leaves Black a point ahead.
+    const fen = 'r1bq1rk1/pppp1Npp/2n2n2/2b1p3/2B1P3/5Q2/PPPP1PPP/RNB1K2R b KQ - 0 6';
+    const pv = ['f8f7', 'c4f7', 'g8f7', 'd2d3', 'd7d5', 'b1c3'];
+    expect(sacrificedMaterial(fen, pv, 6)).toBe(0);
+  });
 });

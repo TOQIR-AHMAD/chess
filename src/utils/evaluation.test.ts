@@ -11,6 +11,7 @@ import {
   moveAccuracy,
   scoreToCp,
   terminalScore,
+  terminalScoreInGame,
   toMoverPov,
   toWhitePov,
   winProbability,
@@ -194,6 +195,36 @@ describe('terminalScore', () => {
 
   it('returns null for a live position', () => {
     expect(terminalScore('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')).toBeNull();
+  });
+});
+
+describe('terminalScoreInGame', () => {
+  /*
+   * Both knights out and back twice (Nf3 Nf6 Ng1 Ng8, twice over). The starting
+   * position returns at index 4 and again at index 8, and that third occurrence
+   * is a draw — something none of these FENs can show on its own.
+   */
+  const openings = [
+    'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    'rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1',
+    'rnbqkb1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 2 2',
+    'rnbqkb1r/pppppppp/5n2/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 3 2',
+    'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 4 3',
+    'rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 5 3',
+    'rnbqkb1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 6 4',
+    'rnbqkb1r/pppppppp/5n2/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 7 4',
+    'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 8 5',
+  ];
+
+  it('scores the third occurrence of a position as the draw it is', () => {
+    expect(terminalScoreInGame(openings, 0)).toBeNull();
+    expect(terminalScoreInGame(openings, 4)).toBeNull();
+    expect(terminalScoreInGame(openings, 8)).toEqual({ type: 'cp', value: 0 });
+  });
+
+  it('still reports checkmate ahead of repetition', () => {
+    const mated = ['rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3'];
+    expect(terminalScoreInGame(mated, 0)).toEqual({ type: 'mate', value: -1 });
   });
 });
 

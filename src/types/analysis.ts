@@ -60,6 +60,7 @@ export type MoveClassification =
   | 'excellent'
   | 'good'
   | 'book'
+  | 'forced'
   | 'inaccuracy'
   | 'mistake'
   | 'blunder'

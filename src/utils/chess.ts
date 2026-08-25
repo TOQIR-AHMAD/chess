@@ -85,9 +85,8 @@ function seeRecursive(chess: Chess, square: string, depth: number): number {
  *     the opponent wins back by starting captures there. An even trade nets zero;
  *     `Rxf7` answered by `Kxf7` nets four. This also catches *declined* sacrifices,
  *     because the offer is measured whether or not the engine's line accepts it.
- *  2. **Dip along the principal variation** — the worst material balance the mover
- *     reaches over the next few plies, which catches material given up somewhere
- *     other than the square just moved to.
+ *  2. **Material still missing at the end of the engine's line**, which catches
+ *     material given up somewhere other than the square just moved to.
  *
  * Returns a positive number when material was given up, 0 otherwise.
  */
@@ -118,14 +117,31 @@ export function sacrificedMaterial(fenBefore: string, uciMoves: string[], lookah
   const recaptured = staticExchangeEval(chess.fen(), moved.to);
   const exchangeOffer = Math.max(0, recaptured - captured);
 
-  const pvDip = principalVariationDip(fenBefore, uciMoves, lookaheadPlies);
+  const unrecovered = unrecoveredMaterial(fenBefore, uciMoves, lookaheadPlies);
 
-  const offered = Math.max(exchangeOffer, pvDip);
+  const offered = Math.max(exchangeOffer, unrecovered);
   return offered > 0 ? Number(offered.toFixed(2)) : 0;
 }
 
-/** Worst material balance the mover reaches along the engine's line. */
-function principalVariationDip(fenBefore: string, uciMoves: string[], lookaheadPlies: number): number {
+/**
+ * Material the mover is *still* down once the engine's line has been played out.
+ *
+ * Two details decide whether this measures a sacrifice or just an exchange:
+ *
+ *  - **When to read the balance.** Only after the mover's own moves — the even
+ *    plies of the line — so a capture the mover is about to answer is never
+ *    counted. Reading it after the opponent's move instead catches the position
+ *    mid-exchange, when the mover has been taken and has not yet recaptured, and
+ *    makes every ordinary trade in the line look like an offer of material.
+ *  - **Which reading to trust.** The last one, not the worst one. Material that
+ *    the line wins straight back was traded, not sacrificed; only a deficit still
+ *    standing when the line runs out is something the mover actually gave up.
+ *
+ * Both readings are deliberately conservative: a combination whose material comes
+ * back beyond the lookahead window scores 0 here rather than being called a
+ * sacrifice, because a wrong "brilliant" is far more visible than a missing one.
+ */
+function unrecoveredMaterial(fenBefore: string, uciMoves: string[], lookaheadPlies: number): number {
   const mover = sideToMove(fenBefore);
   const sign = mover === 'w' ? 1 : -1;
   const before = materialBalance(fenBefore) * sign;
@@ -137,7 +153,7 @@ function principalVariationDip(fenBefore: string, uciMoves: string[], lookaheadP
     return 0;
   }
 
-  let worst = before;
+  let settled: number | null = null;
   for (let i = 0; i < Math.min(uciMoves.length, lookaheadPlies); i += 1) {
     const uci = uciMoves[i];
     if (!uci) break;
@@ -151,13 +167,11 @@ function principalVariationDip(fenBefore: string, uciMoves: string[], lookaheadP
     } catch {
       break;
     }
-    // Only sample after the opponent has had the chance to recapture.
-    if (i % 2 === 1) {
-      worst = Math.min(worst, materialBalance(chess.fen()) * sign);
-    }
+    if (i % 2 === 0) settled = materialBalance(chess.fen()) * sign;
   }
 
-  const deficit = before - worst;
+  if (settled === null) return 0;
+  const deficit = before - settled;
   return deficit > 0 ? Number(deficit.toFixed(2)) : 0;
 }
 
@@ -262,6 +276,32 @@ export function kingSquare(fen: string, side: 'w' | 'b'): string | null {
     }
   }
   return null;
+}
+
+/**
+ * The part of a FEN that decides whether two positions are *the same position*
+ * for repetition purposes: the board, the side to move, castling rights and the
+ * en-passant square. The two clocks are deliberately excluded.
+ */
+export function repetitionKey(fen: string): string {
+  return fen.split(' ').slice(0, 4).join(' ');
+}
+
+/**
+ * How many times the position at `index` has occurred so far in the game.
+ *
+ * Repetition is a property of the game, not of a position, so a FEN on its own
+ * can never reveal it — which is why this takes the whole list of positions
+ * played. The third occurrence is the draw.
+ */
+export function repetitionCount(positions: string[], index: number): number {
+  const key = repetitionKey(positions[index] ?? '');
+  if (!key) return 0;
+  let seen = 0;
+  for (let i = 0; i <= index && i < positions.length; i += 1) {
+    if (repetitionKey(positions[i]) === key) seen += 1;
+  }
+  return seen;
 }
 
 /** Terminal state of a position, or null when the game continues. */

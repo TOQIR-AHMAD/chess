@@ -11,7 +11,7 @@ engine is Stockfish 18 compiled to WebAssembly, running in a Web Worker on the u
 > This is an independent project. It is not affiliated with or endorsed by Chess.com, and
 > its accuracy and move-classification algorithms are its own (documented below) rather
 > than reproductions of theirs. The one exception is the move-quality badge artwork: those
-> nine icons are Chess.com's, so a game reviewed here reads the same way as the same game
+> icons are Chess.com's, so a game reviewed here reads the same way as the same game
 > reviewed there. See [Licence notes](#licence-notes).
 
 ---
@@ -197,11 +197,19 @@ const thresholds = {
 Decision order — first match wins:
 
 1. **Book** — the position is still inside a known ECO line.
-2. **Brilliant** — a genuine material sacrifice the engine endorses (see below).
-3. **Missed win** — a forced mate or decisive advantage thrown away, while the resulting
+2. **Forced** — there was exactly one legal move. No decision was made, so the evaluation
+   swing that follows belongs to the position, not to the player.
+3. **Brilliant** — a genuine material sacrifice the engine endorses (see below).
+4. **Missed win** — a forced mate or decisive advantage thrown away, while the resulting
    position is still playable. Throwing away a win *and* ending up lost is a blunder.
-4. **Blunder / Mistake / Inaccuracy** — by centipawn loss.
-5. **Best / Excellent / Good** — by how close the move is to the engine's choice.
+5. **Blunder / Mistake / Inaccuracy** — by centipawn loss.
+6. **Best / Excellent / Good** — by how close the move is to the engine's choice.
+
+**Repetition.** A game that ends by threefold repetition is scored `0.00`, however lopsided
+the material is — otherwise the graph ends by claiming someone is winning a drawn game, and
+the move that repeated is not recognised as the win it threw away. Repetition is a property
+of the game rather than of a position, so it is detected across the played position list
+(`terminalScoreInGame`) rather than from a FEN, which cannot show it.
 
 **Hopeless damping.** Once a side is worse than `hopeless` pawns, further drops can no
 longer be blunders. Losing a lost game more thoroughly is not a new error.
@@ -218,8 +226,16 @@ Material offered is measured two ways and the larger is taken:
   what the opponent wins back by starting captures there). An even trade nets zero; `Rxf7`
   answered by `Kxf7` nets four. This also catches *declined* sacrifices, because the offer
   is measured whether or not the engine's line accepts it; and
-- the **worst material balance along the engine's principal variation**, which catches
-  material given up somewhere other than the square just moved to.
+- the **material still missing when the engine's line runs out**, which catches material
+  given up somewhere other than the square just moved to.
+
+  Two details do the work here. The balance is read only after the mover's *own* moves,
+  when any recapture has been made — read it after the opponent's move instead and it
+  catches the position mid-exchange, before the answer, which makes every ordinary trade in
+  the line look like an offer of material. And the judgement is made on where the line
+  *ends*, not on its worst moment: material the line wins straight back was traded, not
+  sacrificed. Both readings are deliberately conservative, because a wrong "brilliant" is
+  far more visible than a missing one.
 
 ### Explanations
 
@@ -361,8 +377,9 @@ Stockfish is GPL-3.0; it is shipped unmodified as a static asset and its licence
 with it. Chess.com data is used through their documented public API. Application code,
 design and the opening table are original to this project.
 
-The nine move-quality badges in `src/components/chess/classificationArt.ts` are Chess.com's
-artwork, redrawn from their public `color-icons/move-*.svg` assets, and the move-quality
-palette derives from them. They are used here for familiarity, not to imply any
-association. If you fork this for anything public-facing, replace them with your own set —
-everything else in the project is already yours to use.
+The move-quality badges in `src/components/chess/classificationArt.ts` are Chess.com's
+artwork, redrawn from their public `color-icons/move-*.svg` assets and, for **Forced**, from
+the icon set in their analysis bundle; the move-quality palette derives from them. They are
+used here for familiarity, not to imply any association. If you fork this for anything
+public-facing, replace them with your own set — everything else in the project is already
+yours to use.

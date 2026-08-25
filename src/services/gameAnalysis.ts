@@ -10,7 +10,7 @@ import type {
 } from '@/types/analysis';
 import type { ParsedGame } from '@/types/game';
 import { sideToMove, uciLineToSan, uciToSan } from '@/utils/chess';
-import { terminalScore, toWhitePov } from '@/utils/evaluation';
+import { terminalScoreInGame, toWhitePov } from '@/utils/evaluation';
 import { CLASSIFICATION_ORDER, classifyMove, computeAccuracy, explainMove } from './classification';
 import { bookDepthFor, detectOpening } from './openings';
 import { caches } from './cache';
@@ -34,8 +34,11 @@ import { EngineAbortError } from '@/workers/stockfishWorker';
  * produced by an older build are not served for a newer one.
  * 4 — opening book matches by position, which changes which moves count as book.
  * 5 — opening names drop the move sequence Chess.com appends to the URL slug.
+ * 6 — sacrifices are measured once the engine's line has settled, so ordinary
+ *     exchanges no longer read as material offered up (and as brilliancies).
+ * 7 — a draw by repetition scores 0.00, and the only legal move is "forced".
  */
-const ANALYSIS_VERSION = 5;
+const ANALYSIS_VERSION = 7;
 
 export interface AnalyseGameOptions {
   parsed: ParsedGame;
@@ -130,7 +133,7 @@ export async function analyseGame(options: AnalyseGameOptions): Promise<GameRevi
     if (signal?.aborted) throw new AnalysisCancelled();
 
     const fen = positions[i];
-    const terminal = terminalScore(fen);
+    const terminal = terminalScoreInGame(positions, i);
     if (terminal) {
       evaluations[i] = terminal;
     } else {

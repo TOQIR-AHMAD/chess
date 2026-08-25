@@ -198,7 +198,8 @@ describe('classifyMove — brilliant moves', () => {
         legalMoveCount: 1,
       }),
     );
-    expect(result.classification).toBe('best');
+    // Forced, not brilliant: a sacrifice you had no choice about is not a decision.
+    expect(result.classification).toBe('forced');
   });
 
   it('is not brilliant when a quiet move was just as good', () => {

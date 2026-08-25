@@ -175,10 +175,13 @@ export function ChessBoard({
     return styles;
   }, [checkedKing, lastMove, selected, targets]);
 
+  // Amber rather than a plain yellow, and carried at a higher alpha than a green
+  // would need: yellow is the lighter colour of the two, so on the cream square it
+  // needs the extra weight to stay as legible as it is against the dark one.
   const arrows = useMemo(
     () =>
       bestMove
-        ? [{ startSquare: bestMove.from, endSquare: bestMove.to, color: 'rgba(116, 172, 65, 0.7)' }]
+        ? [{ startSquare: bestMove.from, endSquare: bestMove.to, color: 'rgba(247, 191, 34, 0.85)' }]
         : [],
     [bestMove],
   );

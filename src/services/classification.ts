@@ -78,6 +78,12 @@ export const CLASSIFICATION_META: Record<MoveClassification, ClassificationMeta>
     badge: 'badge-book',
     description: 'Known opening theory.',
   },
+  forced: {
+    label: 'Forced',
+    color: 'cls-forced',
+    badge: 'badge-forced',
+    description: 'The only legal move.',
+  },
   inaccuracy: {
     label: 'Inaccuracy',
     color: 'cls-inaccuracy',
@@ -115,6 +121,7 @@ export const CLASSIFICATION_ORDER: MoveClassification[] = [
   'excellent',
   'good',
   'book',
+  'forced',
   'inaccuracy',
   'mistake',
   'missed',
@@ -157,11 +164,12 @@ const pawnsToCp = (pawns: number) => Math.round(pawns * 100);
  *
  * Decision order (first match wins):
  *   1. Book        — the position is still inside a known ECO line.
- *   2. Brilliant   — a genuine material sacrifice that the engine endorses.
- *   3. Missed win  — a forced mate or decisive advantage was thrown away, but the
+ *   2. Forced      — there was nothing else to play.
+ *   3. Brilliant   — a genuine material sacrifice that the engine endorses.
+ *   4. Missed win  — a forced mate or decisive advantage was thrown away, but the
  *                    resulting position is not itself lost.
- *   4. Blunder / Mistake / Inaccuracy — by centipawn loss.
- *   5. Best / Excellent / Good — by how close the move is to the engine's choice.
+ *   5. Blunder / Mistake / Inaccuracy — by centipawn loss.
+ *   6. Best / Excellent / Good — by how close the move is to the engine's choice.
  *
  * "Hopeless" damping: once a side is worse than `thresholds.hopeless` pawns, further
  * drops can no longer be blunders — losing a lost game more thoroughly is not a new error.
@@ -191,6 +199,10 @@ export function classifyMove(input: ClassificationInput): ClassificationOutput {
   };
 
   if (input.isBook) return { ...base, classification: 'book' };
+
+  // Nothing to judge: with one legal move the player made no decision, so the
+  // evaluation swing that follows is the position's doing, not theirs.
+  if (input.legalMoveCount === 1) return { ...base, classification: 'forced' };
 
   if (isBrilliant(input, { loss, moverBefore, moverAfter, sacrifice })) {
     return { ...base, classification: 'brilliant' };
@@ -289,6 +301,9 @@ export function explainMove(
         ? `Still in known theory — ${context.openingName}. The evaluation stays at ${after}.`
         : `A known opening move. The evaluation stays at ${after}.`;
 
+    case 'forced':
+      return `The only legal move. Evaluation ${before} → ${after}.`;
+
     case 'brilliant':
       return `${analysis.san} gives up ${analysis.sacrificedMaterial} point${
         analysis.sacrificedMaterial === 1 ? '' : 's'
@@ -349,6 +364,7 @@ export function emptyCounts(): Record<MoveClassification, number> {
     excellent: 0,
     good: 0,
     book: 0,
+    forced: 0,
     inaccuracy: 0,
     mistake: 0,
     blunder: 0,

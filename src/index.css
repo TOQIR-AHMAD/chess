@@ -178,6 +178,7 @@
   --cls-excellent: #81b64c;
   --cls-good: #95b776;
   --cls-book: #d5a47d;
+  --cls-forced: #96af8b;
   --cls-inaccuracy: #f7c631;
   --cls-mistake: #ffa459;
   --cls-blunder: #fa412d;
@@ -782,6 +783,9 @@
   .cls-book {
     color: var(--cls-book);
   }
+  .cls-forced {
+    color: var(--cls-forced);
+  }
   .cls-inaccuracy {
     color: var(--cls-inaccuracy);
   }
@@ -800,6 +804,7 @@
   .badge-excellent,
   .badge-good,
   .badge-book,
+  .badge-forced,
   .badge-inaccuracy,
   .badge-mistake,
   .badge-blunder,
@@ -822,6 +827,9 @@
   }
   .badge-book {
     --badge-tint: var(--cls-book);
+  }
+  .badge-forced {
+    --badge-tint: var(--cls-forced);
   }
   .badge-inaccuracy {
     --badge-tint: var(--cls-inaccuracy);
