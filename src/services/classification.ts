@@ -40,8 +40,6 @@ export const DEFAULT_THRESHOLDS: ClassificationThresholds = {
 
 export interface ClassificationMeta {
   label: string;
-  /** Annotation glyph appended to the move in the move list. */
-  glyph: string;
   /** Move-quality colour class (see `index.css`). */
   color: string;
   /** Filled-pill class for the same colour. */
@@ -52,70 +50,65 @@ export interface ClassificationMeta {
 export const CLASSIFICATION_META: Record<MoveClassification, ClassificationMeta> = {
   brilliant: {
     label: 'Brilliant',
-    glyph: '!!',
     color: 'cls-brilliant',
     badge: 'badge-brilliant',
     description: 'A sound sacrifice the engine confirms.',
   },
   best: {
     label: 'Best',
-    glyph: '',
     color: 'cls-best',
     badge: 'badge-best',
     description: "The engine's top choice.",
   },
   excellent: {
     label: 'Excellent',
-    glyph: '',
     color: 'cls-excellent',
     badge: 'badge-excellent',
     description: 'Practically as good as the best move.',
   },
   good: {
     label: 'Good',
-    glyph: '',
     color: 'cls-good',
     badge: 'badge-good',
     description: 'A reasonable move that keeps the position.',
   },
   book: {
     label: 'Book',
-    glyph: '',
     color: 'cls-book',
     badge: 'badge-book',
     description: 'Known opening theory.',
   },
   inaccuracy: {
     label: 'Inaccuracy',
-    glyph: '?!',
     color: 'cls-inaccuracy',
     badge: 'badge-inaccuracy',
     description: 'A small step in the wrong direction.',
   },
   mistake: {
     label: 'Mistake',
-    glyph: '?',
     color: 'cls-mistake',
     badge: 'badge-mistake',
     description: 'Gives away a meaningful part of the advantage.',
   },
   blunder: {
     label: 'Blunder',
-    glyph: '??',
     color: 'cls-blunder',
     badge: 'badge-blunder',
     description: 'A serious error that changes the outcome.',
   },
   missed: {
     label: 'Missed win',
-    glyph: '?',
     color: 'cls-missed',
     badge: 'badge-missed',
     description: 'A winning continuation was available.',
   },
 };
 
-/** Order used by the game-review breakdown panel. */
+/**
+ * Order used by the game-review breakdown panel: best to worst, with the missed
+ * win sitting just above the blunder — it costs more than a mistake, but the
+ * position it leaves behind is still playable.
+ */
 export const CLASSIFICATION_ORDER: MoveClassification[] = [
   'brilliant',
   'best',
@@ -124,8 +117,8 @@ export const CLASSIFICATION_ORDER: MoveClassification[] = [
   'book',
   'inaccuracy',
   'mistake',
-  'blunder',
   'missed',
+  'blunder',
 ];
 
 export interface ClassificationInput {

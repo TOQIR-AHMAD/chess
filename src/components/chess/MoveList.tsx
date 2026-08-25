@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { MoveAnalysis } from '@/types/analysis';
 import type { ParsedMove } from '@/types/game';
 import { CLASSIFICATION_META } from '@/services/classification';
+import { ClassificationIcon } from './ClassificationIcon';
 import { formatEval } from '@/utils/evaluation';
 import { formatThinkTime, splitSan } from '@/utils/notation';
 import { cn } from '@/utils/cn';
@@ -252,7 +253,13 @@ function MoveCell({
           </span>
         )}
         <span className="truncate">{figurine && glyph ? rest : move.san}</span>
-        {meta?.glyph && <span className={cn('text-[11px] font-bold', meta.color)}>{meta.glyph}</span>}
+        {analysis && (
+          <ClassificationIcon
+            classification={analysis.classification}
+            size={13}
+            className="translate-y-[1px] self-center"
+          />
+        )}
       </span>
 
     </button>

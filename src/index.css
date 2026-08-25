@@ -166,17 +166,22 @@
  * Move-quality and result palette. Like the board, these do not change between
  * light and dark: a blunder should be the same red in both themes. The two status
  * colours are the console's own — its amber and its rose.
+ *
+ * The move-quality values are the face colours of the badges in
+ * `classificationArt.ts`, so the label, the pill and the badge beside a move are
+ * always the same colour. `missed` is the one exception: its badge shares the
+ * inaccuracy gold, and a darker gold here keeps the two apart in the move list.
  */
 :root {
   --cls-brilliant: #26c2a3;
-  --cls-best: #16a34a;
-  --cls-excellent: #4d9d6b;
-  --cls-good: #64748b;
-  --cls-book: #b98a5a;
-  --cls-inaccuracy: #f59e0b;
-  --cls-mistake: #ea7317;
-  --cls-blunder: #e11d48;
-  --cls-missed: #f2647c;
+  --cls-best: #81b64c;
+  --cls-excellent: #81b64c;
+  --cls-good: #95b776;
+  --cls-book: #d5a47d;
+  --cls-inaccuracy: #f7c631;
+  --cls-mistake: #ffa459;
+  --cls-blunder: #fa412d;
+  --cls-missed: #dbac16;
 
   --result-win: #16a34a;
   --result-draw: #64748b;
@@ -828,52 +833,6 @@
     --badge-tint: var(--cls-blunder);
   }
   .badge-missed {
-    --badge-tint: var(--cls-missed);
-  }
-
-  /*
-   * Solid fills for the badge that sits on a board square. White glyph on every
-   * tone except the two light ones, which take the dark ink instead.
-   */
-  .tone-brilliant,
-  .tone-best,
-  .tone-excellent,
-  .tone-good,
-  .tone-book,
-  .tone-inaccuracy,
-  .tone-mistake,
-  .tone-blunder,
-  .tone-missed {
-    background: var(--badge-tint);
-    color: #ffffff;
-  }
-  .tone-brilliant {
-    --badge-tint: var(--cls-brilliant);
-  }
-  .tone-best {
-    --badge-tint: var(--cls-best);
-  }
-  .tone-excellent {
-    --badge-tint: var(--cls-excellent);
-  }
-  .tone-good {
-    --badge-tint: var(--cls-good);
-  }
-  .tone-book {
-    --badge-tint: var(--cls-book);
-    color: #0f172a;
-  }
-  .tone-inaccuracy {
-    --badge-tint: var(--cls-inaccuracy);
-    color: #0f172a;
-  }
-  .tone-mistake {
-    --badge-tint: var(--cls-mistake);
-  }
-  .tone-blunder {
-    --badge-tint: var(--cls-blunder);
-  }
-  .tone-missed {
     --badge-tint: var(--cls-missed);
   }
 

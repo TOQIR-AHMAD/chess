@@ -1,5 +1,6 @@
 import type { MoveAnalysis } from '@/types/analysis';
 import { CLASSIFICATION_META } from '@/services/classification';
+import { ClassificationIcon } from './ClassificationIcon';
 import { formatEval } from '@/utils/evaluation';
 import { formatSanLine } from '@/utils/chess';
 import { cn } from '@/utils/cn';
@@ -48,9 +49,9 @@ export function AnalysisPanel({
           <p className="text-muted text-[11px] font-semibold tracking-wide uppercase">
             Move {move.moveNumber} · {playedByLabel}
           </p>
-          <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-xl font-bold">
+          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-xl font-bold">
+            <ClassificationIcon classification={move.classification} size={22} />
             {move.san}
-            {meta.glyph && <span className={meta.color}>{meta.glyph}</span>}
           </p>
         </div>
         <span className={cn('chip ring-1', meta.badge)}>{meta.label}</span>

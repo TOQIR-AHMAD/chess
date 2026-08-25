@@ -196,7 +196,7 @@ export function ChessBoard({
           <ClassificationIcon
             classification={badge}
             size="square"
-            className="pointer-events-none absolute -top-[8%] -right-[8%] z-20"
+            className="pointer-events-none absolute -top-[8%] -right-[8%] z-20 drop-shadow-md"
           />
         )}
       </div>

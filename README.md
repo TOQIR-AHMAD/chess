@@ -8,9 +8,11 @@ No backend, no API key, no account. Game data comes from the public
 [Chess.com Published-Data API](https://www.chess.com/news/view/published-data-api) and the
 engine is Stockfish 18 compiled to WebAssembly, running in a Web Worker on the user's machine.
 
-> This is an independent project. It is not affiliated with, endorsed by, or derived from
-> Chess.com's source code, assets or branding, and its accuracy and move-classification
-> algorithms are its own (documented below) rather than reproductions of theirs.
+> This is an independent project. It is not affiliated with or endorsed by Chess.com, and
+> its accuracy and move-classification algorithms are its own (documented below) rather
+> than reproductions of theirs. The one exception is the move-quality badge artwork: those
+> nine icons are Chess.com's, so a game reviewed here reads the same way as the same game
+> reviewed there. See [Licence notes](#licence-notes).
 
 ---
 
@@ -284,7 +286,8 @@ adjustable in the settings panel.
 ## Interface
 
 The analysis page follows the layout conventions players already know, implemented
-from scratch — no third-party CSS, icon art, piece sets or brand assets:
+from scratch — no third-party CSS, piece sets or brand assets, and the only borrowed
+icon art is the move-quality badge set noted below:
 
 - **Name plates above and below the board** carrying avatar, title, rating, captured
   material, material advantage, the clock read from the PGN's `[%clk]` comments, and
@@ -297,8 +300,11 @@ from scratch — no third-party CSS, icon art, piece sets or brand assets:
 - **A single tabbed side rail** — Moves, Review, Engine, Game — with the selected
   move's feedback pinned above the tabs. The whole workspace fits one desktop screen
   and the move list scrolls inside itself instead of the page growing under it.
-- **Round move-quality badges** drawn as a filled circle plus a glyph, used both on
-  the board square and in the review breakdown.
+- **Round move-quality badges** — Chess.com's own review icons, inlined as SVG in
+  `classificationArt.ts` so they stay sharp at any size and cost no image request.
+  They appear on the board square, beside every move in the move list, on the
+  selected-move card and in the review breakdown, and the `--cls-*` palette that
+  colours the labels and pills is taken from the same nine badges.
 - **A review breakdown laid out as two player columns**, so accuracy and every
   move-quality count can be compared by reading across a row.
 - A warm charcoal dark theme, chosen because a cool blue-grey washes a green board out.
@@ -353,4 +359,10 @@ including a scripted fake engine that exercises queueing, preemption, cancellati
 
 Stockfish is GPL-3.0; it is shipped unmodified as a static asset and its licence travels
 with it. Chess.com data is used through their documented public API. Application code,
-design, icons and the opening table are original to this project.
+design and the opening table are original to this project.
+
+The nine move-quality badges in `src/components/chess/classificationArt.ts` are Chess.com's
+artwork, redrawn from their public `color-icons/move-*.svg` assets, and the move-quality
+palette derives from them. They are used here for familiarity, not to imply any
+association. If you fork this for anything public-facing, replace them with your own set —
+everything else in the project is already yours to use.
