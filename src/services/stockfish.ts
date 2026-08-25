@@ -33,13 +33,13 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   // page is cross-origin isolated, so this is safe everywhere.
   threads: maxThreads(),
   hash: 64,
-  // Depth alone is not a usable limit at 18. Most positions reach it in well under
-  // a second, but a position inside a forced-mate sequence — a king being walked
-  // down, where every line transposes — can search for minutes without the depth
-  // counter moving, and a single such position stalls the whole pass. The cap
-  // bounds the worst case; ordinary positions never reach it, so it costs nothing
-  // where it is not needed. 0 restores pure depth-only search.
-  moveTimeMs: 2500,
+  // Depth-only, deliberately. A time cap would make the review depend on the
+  // machine running it: a phone would hit the cap several plies shallower than a
+  // desktop and classify the same game differently, which is indefensible for a
+  // shared link. What the cap was really working around — positions inside a
+  // forced-mate sequence searching for minutes — is now handled at the source, by
+  // stopping the engine once it has proved a mate (`stockfishWorker.ts`).
+  moveTimeMs: 0,
   multiPv: 2,
 };
 

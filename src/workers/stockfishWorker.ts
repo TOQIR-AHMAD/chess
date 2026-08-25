@@ -66,6 +66,12 @@ interface ActiveSearch extends QueueEntry {
   timeMs: number | null;
   stopRequested: boolean;
   preempted: boolean;
+  /**
+   * Set when we stopped the engine ourselves because the position is already
+   * settled. Kept apart from `stopRequested` so the result is not reported as
+   * interrupted — nothing was cut short, the answer was simply already known.
+   */
+  settled: boolean;
   lastEmit: number;
   onAbort: (() => void) | null;
 }
@@ -397,6 +403,7 @@ export class UciEngine {
       timeMs: null,
       stopRequested: false,
       preempted: false,
+      settled: false,
       lastEmit: 0,
       onAbort: null,
     };
@@ -462,6 +469,35 @@ export class UciEngine {
         search.job.onUpdate(this.buildResult(search, false));
       }
     }
+
+    // Guarded on `settled`: the engine keeps emitting info lines after `stop`
+    // until it answers `bestmove`, and each one would re-trigger this.
+    if (!search.settled && !search.stopRequested && this.isSettled(info)) {
+      search.settled = true;
+      this.post('stop');
+    }
+  }
+
+  /**
+   * True once the engine has proved a forced mate in the best line.
+   *
+   * There is nothing left to learn: the position's value is exact, and no extra
+   * depth can improve on "mate in N". Searching on is not merely wasteful — inside
+   * a mating sequence, where a king is walked down and every line transposes, the
+   * depth counter can sit still for *minutes* while the engine re-proves what it
+   * already knows, and one such position stalls a whole game's review.
+   *
+   * Only the principal variation counts, and only an exact score: a `lowerbound` /
+   * `upperbound` mate is the engine's aspiration window talking, not a proof.
+   */
+  private isSettled(info: ReturnType<typeof parseInfoLine>): boolean {
+    if (!info) return false;
+    if (info.multipv !== 1) return false;
+    if (info.bound !== null) return false;
+    if (info.pv.length === 0) return false;
+    // `mate 0` means the side to move is already mated; those positions never
+    // reach the engine, and stopping on one would leave us without a best move.
+    return info.score?.type === 'mate' && info.score.value !== 0;
   }
 
   private finishSearch(search: ActiveSearch, bestMoveLine: string): void {

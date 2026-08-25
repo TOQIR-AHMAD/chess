@@ -222,6 +222,86 @@ describe('UciEngine — searching', () => {
   });
 });
 
+describe('UciEngine — settled positions', () => {
+  const DEFAULT_SCRIPT = FakeEngineWorker.script;
+
+  afterEach(() => {
+    FakeEngineWorker.script = DEFAULT_SCRIPT;
+  });
+
+  /** Runs one search and hands back the result plus what the engine was told. */
+  async function search(infos: string[], autoFinishMs: number | null) {
+    FakeEngineWorker.script = { infos, bestMove: 'bestmove d8d2 ponder e1f1' };
+    FakeEngineWorker.autoFinishMs = autoFinishMs;
+    const engine = new UciEngine();
+    const result = await engine.analyse({ fen: START_FEN, depth: 30, multiPv: 2, priority: Priority.Batch });
+    const sent = [...FakeEngineWorker.instances[0].sent];
+    engine.dispose();
+    return { result, sent };
+  }
+
+  it('stops as soon as a forced mate is proved', async () => {
+    // autoFinishMs null: the fake engine answers only when told to stop, so this
+    // resolving at all is the assertion that we stopped it.
+    const { result, sent } = await search(
+      [
+        'info depth 12 multipv 1 score cp 640 pv d8d2 e1f1',
+        'info depth 14 multipv 1 score mate 5 pv d8d2 e1f1 d2d1',
+      ],
+      null,
+    );
+    expect(sent).toContain('stop');
+    expect(result.lines[0].score).toEqual({ type: 'mate', value: 5 });
+  });
+
+  it('does not report a settled search as interrupted', async () => {
+    // The distinction matters: gameAnalysis retries interrupted searches, and a
+    // position we stopped deliberately has nothing to retry.
+    const { result } = await search(['info depth 14 multipv 1 score mate 3 pv d8d2 e1f1'], null);
+    expect(result.interrupted).toBe(false);
+    expect(result.bestMove).toBe('d8d2');
+  });
+
+  it('stops on a mate against the side to move too', async () => {
+    const { sent } = await search(['info depth 14 multipv 1 score mate -4 pv e1f1 d8d2'], null);
+    expect(sent).toContain('stop');
+  });
+
+  it('keeps searching while the score is still centipawns', async () => {
+    const { sent } = await search(['info depth 14 multipv 1 score cp 900 pv d8d2 e1f1'], 5);
+    expect(sent).not.toContain('stop');
+  });
+
+  it('ignores a bounded mate score', async () => {
+    // A lowerbound score is the aspiration window talking, not a proof.
+    const { sent } = await search(['info depth 14 multipv 1 score mate 5 lowerbound pv d8d2'], 5);
+    expect(sent).not.toContain('stop');
+  });
+
+  it('ignores a mate found only in a secondary line', async () => {
+    const { sent } = await search(
+      [
+        'info depth 14 multipv 1 score cp 120 pv e1f1 d8d2',
+        'info depth 14 multipv 2 score mate 6 pv d8d2 e1f1',
+      ],
+      5,
+    );
+    expect(sent).not.toContain('stop');
+  });
+
+  it('asks the engine to stop exactly once', async () => {
+    const { sent } = await search(
+      [
+        'info depth 14 multipv 1 score mate 5 pv d8d2 e1f1',
+        'info depth 15 multipv 1 score mate 5 pv d8d2 e1f1 d2d1',
+        'info depth 16 multipv 1 score mate 4 pv d8d2 e1f1 d2d1',
+      ],
+      null,
+    );
+    expect(sent.filter((line) => line === 'stop')).toHaveLength(1);
+  });
+});
+
 describe('UciEngine — preemption and cancellation', () => {
   // These searches must stay running until something stops them.
   beforeEach(() => {
