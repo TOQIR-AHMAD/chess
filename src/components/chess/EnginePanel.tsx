@@ -11,17 +11,21 @@ import { cn } from '@/utils/cn';
 /**
  * Live engine readout for the position currently on the board: name, depth,
  * evaluation and the top principal variations. Clicking a variation plays it out
- * on the board via `onPlayLine`.
+ * on the board via `onPlayLine`. A line that ends in forced mate also gets a
+ * walk-through button (`onStepLine`), which is the only way to actually read a
+ * long mating sequence — those are the lines worth following to the end.
  */
 export function EnginePanel({
   fen,
   live,
   onPlayLine,
+  onStepLine,
   className,
 }: {
   fen: string;
   live: LiveAnalysis;
   onPlayLine?: (uciMoves: string[]) => void;
+  onStepLine?: (uciMoves: string[]) => void;
   className?: string;
 }) {
   const turn = sideToMove(fen);
@@ -84,7 +88,7 @@ export function EnginePanel({
 
       <ol className="space-y-1">
         {live.lines.slice(0, 3).map((line) => (
-          <EngineLine key={line.multipv} fen={fen} line={line} onPlay={onPlayLine} />
+          <EngineLine key={line.multipv} fen={fen} line={line} onPlay={onPlayLine} onStep={onStepLine} />
         ))}
         {live.lines.length === 0 && (
           <li className="text-muted py-2 text-xs">
@@ -100,25 +104,32 @@ function EngineLine({
   fen,
   line,
   onPlay,
+  onStep,
 }: {
   fen: string;
   line: PvLine;
   onPlay?: (uciMoves: string[]) => void;
+  onStep?: (uciMoves: string[]) => void;
 }) {
   const score = toWhitePov(line.score, sideToMove(fen));
   const text = formatSanLine(fen, line.san, 8);
+  // Only a forced mate gets the walk-through control. Any line can be stepped
+  // through in principle, but on an ordinary line the next move is a suggestion
+  // that stops meaning much a few plies in — a mate is a sequence worth reading
+  // to the end, and putting the button on every line just makes it noise.
+  const mateIn = line.score.type === 'mate' && line.score.value !== 0 ? Math.abs(line.score.value) : null;
 
   return (
-    <li>
+    <li className="flex items-start gap-1">
       <button
         type="button"
         onClick={() => onPlay?.(line.pv)}
         disabled={!onPlay || line.pv.length === 0}
         className={cn(
-          'group flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors',
+          'group flex min-w-0 flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors',
           onPlay ? 'hover:bg-[var(--surface-hover)]' : 'cursor-default',
         )}
-        title={onPlay ? 'Play this line on the board' : undefined}
+        title={onPlay ? 'Play this line out on the board' : undefined}
       >
         <span
           className={cn(
@@ -130,6 +141,17 @@ function EngineLine({
         </span>
         <span className="text-secondary min-w-0 flex-1 truncate font-mono text-xs">{text || '—'}</span>
       </button>
+
+      {onStep && mateIn !== null && line.pv.length > 0 && (
+        <button
+          type="button"
+          onClick={() => onStep(line.pv)}
+          className="btn btn-ghost mt-px h-6 shrink-0 px-2 text-[11px] whitespace-nowrap"
+          title={`Walk through the mate in ${mateIn}, one move at a time`}
+        >
+          Step mate
+        </button>
+      )}
     </li>
   );
 }

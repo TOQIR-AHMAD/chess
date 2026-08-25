@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Chess } from 'chess.js';
+import { Chess, type Move } from 'chess.js';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { Score } from '@/types/analysis';
 import type { Color, ParsedMove } from '@/types/game';
@@ -37,6 +37,7 @@ import { PgnError } from '@/services/pgnParser';
 import { toWhitePov } from '@/utils/evaluation';
 import { materialSnapshot, sideToMove } from '@/utils/chess';
 import { playerPath } from '@/utils/routes';
+import { cn } from '@/utils/cn';
 
 /**
  * Width of the evaluation column (42px bar + 6px gap). The name plates are pushed
@@ -47,6 +48,64 @@ const EVAL_COLUMN_WIDTH = 48;
 
 /** A name plate is `h-9`, border included; the board leaves room for two of them. */
 const STRIP_HEIGHT = 36;
+
+/**
+ * Turn a chess.js move into the same shape the PGN parser produces, so a move the
+ * user played and a move from the game are interchangeable everywhere downstream.
+ * The clock fields are null by design: a move that was never played has no clock.
+ */
+function toParsedMove(result: Move, previousPly: number): ParsedMove {
+  return {
+    ply: previousPly + 1,
+    moveNumber: Number.parseInt(result.before.split(' ')[5] ?? '1', 10) || 1,
+    color: result.color === 'w' ? 'white' : 'black',
+    san: result.san,
+    uci: result.lan,
+    from: result.from,
+    to: result.to,
+    piece: result.piece,
+    captured: result.captured,
+    promotion: result.promotion,
+    fenBefore: result.before,
+    fenAfter: result.after,
+    clockSeconds: null,
+    secondsSpent: null,
+    check: result.san.includes('+'),
+    mate: result.san.includes('#'),
+  };
+}
+
+/**
+ * Play one move onto a FEN, accepting either notation. Engine principal
+ * variations arrive as UCI and the stored review lines as SAN, and a line worth
+ * stepping through can come from either — so both are tried rather than making
+ * every caller convert first. Null when the move does not fit the position.
+ */
+function playMove(fen: string, move: string): Move | null {
+  const chess = new Chess();
+  try {
+    chess.load(fen);
+  } catch {
+    return null;
+  }
+  try {
+    const san = chess.move(move);
+    if (san) return san;
+  } catch {
+    // Not SAN — fall through and read it as UCI.
+  }
+  try {
+    return (
+      chess.move({
+        from: move.slice(0, 2),
+        to: move.slice(2, 4),
+        promotion: move.length > 4 ? move[4] : undefined,
+      }) ?? null
+    );
+  } catch {
+    return null;
+  }
+}
 
 /** Below this the board stops shrinking and the stage scrolls instead. */
 const MIN_BOARD_SIZE = 220;
@@ -93,6 +152,8 @@ export function GameAnalysisPage() {
 
   // Moves the user plays on the board that are not part of the game.
   const [exploration, setExploration] = useState<ParsedMove[]>([]);
+  /** An engine line being walked one move at a time, and how deep the side line already was. */
+  const [stepper, setStepper] = useState<{ line: string[]; base: number } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [tab, setTab] = useState<RailTab>('moves');
 
@@ -113,8 +174,11 @@ export function GameAnalysisPage() {
     return Math.max(MIN_BOARD_SIZE, Math.min(byWidth, byHeight));
   }, [fitViewport, stage.height, stage.width]);
 
-  // Leaving the position resets any side line.
-  useEffect(() => setExploration([]), [nav.index, parsed]);
+  // Leaving the position resets any side line, and the walk through it.
+  useEffect(() => {
+    setExploration([]);
+    setStepper(null);
+  }, [nav.index, parsed]);
 
   const displayFen = exploration.length > 0 ? exploration[exploration.length - 1].fenAfter : nav.fen;
   const exploring = exploration.length > 0;
@@ -193,33 +257,15 @@ export function GameAnalysisPage() {
         return true;
       }
 
-      setExploration((prev) => [
-        ...prev,
-        {
-          ply: (prev[prev.length - 1]?.ply ?? nav.index - 1) + 1,
-          moveNumber: Number.parseInt(result.before.split(' ')[5] ?? '1', 10) || 1,
-          color: result.color === 'w' ? 'white' : 'black',
-          san: result.san,
-          uci: result.lan,
-          from: result.from,
-          to: result.to,
-          piece: result.piece,
-          captured: result.captured,
-          promotion: result.promotion,
-          fenBefore: result.before,
-          fenAfter: result.after,
-          clockSeconds: null,
-          secondsSpent: null,
-          check: result.san.includes('+'),
-          mate: result.san.includes('#'),
-        },
-      ]);
+      // A move of the user's own ends any line they were stepping through.
+      setStepper(null);
+      setExploration((prev) => [...prev, toParsedMove(result, prev[prev.length - 1]?.ply ?? nav.index - 1)]);
       return true;
     },
     [displayFen, exploring, nav, parsed],
   );
 
-  /** Play an engine principal variation out on the board. */
+  /** Play an engine principal variation out on the board, all at once. */
   const playEngineLine = useCallback(
     (uciMoves: string[]) => {
       const chess = new Chess();
@@ -241,29 +287,86 @@ export function GameAnalysisPage() {
           break;
         }
         if (!result) break;
-        added.push({
-          ply: (added[added.length - 1]?.ply ?? nav.index - 1) + 1,
-          moveNumber: Number.parseInt(result.before.split(' ')[5] ?? '1', 10) || 1,
-          color: result.color === 'w' ? 'white' : 'black',
-          san: result.san,
-          uci: result.lan,
-          from: result.from,
-          to: result.to,
-          piece: result.piece,
-          captured: result.captured,
-          promotion: result.promotion,
-          fenBefore: result.before,
-          fenAfter: result.after,
-          clockSeconds: null,
-          secondsSpent: null,
-          check: result.san.includes('+'),
-          mate: result.san.includes('#'),
-        });
+        added.push(toParsedMove(result, added[added.length - 1]?.ply ?? nav.index - 1));
       }
-      if (added.length > 0) setExploration((prev) => [...prev, ...added]);
+      if (added.length > 0) {
+        setStepper(null);
+        setExploration((prev) => [...prev, ...added]);
+      }
     },
     [displayFen, nav.index],
   );
+
+  /** Append one move of a line to the side variation on the board. */
+  const applyMove = useCallback(
+    (move: string) => {
+      setExploration((prev) => {
+        const from = prev.length > 0 ? prev[prev.length - 1].fenAfter : nav.fen;
+        const result = playMove(from, move);
+        if (!result) return prev;
+        return [...prev, toParsedMove(result, prev[prev.length - 1]?.ply ?? nav.index - 1)];
+      });
+    },
+    [nav.fen, nav.index],
+  );
+
+  /**
+   * Begin walking a line one move at a time. `base` remembers how deep the side
+   * variation already was, so the counter reads as the line's own move numbers
+   * even when the walk starts from a position the user had explored to.
+   */
+  const stepEngineLine = useCallback(
+    (moves: string[]) => {
+      if (moves.length === 0) return;
+      setStepper({ line: moves, base: exploration.length });
+      applyMove(moves[0]);
+    },
+    [applyMove, exploration.length],
+  );
+
+  const stepsTaken = stepper ? exploration.length - stepper.base : 0;
+  const stepsLeft = stepper ? stepper.line.length - stepsTaken : 0;
+
+  /**
+   * A forced mate in the position on the board, from the live search. Drives the
+   * banner above the board: a mate is the one thing worth interrupting the page
+   * to announce, and the one line worth reading move by move to the end.
+   */
+  const mate = useMemo(() => {
+    // The live search first: it is looking at the position actually on the board.
+    const top = live.lines[0];
+    if (top && top.score.type === 'mate' && top.score.value !== 0 && top.pv.length > 0) {
+      const white = toWhitePov(top.score, sideToMove(displayFen));
+      return { moves: Math.abs(top.score.value), winner: white.value > 0 ? 'White' : 'Black', line: top.pv };
+    }
+
+    // Otherwise the completed review, which searched this position with the whole
+    // game's transposition table behind it and so often proved a mate the live
+    // search has not reached. Only valid on a game position, not a side line.
+    if (exploring) return null;
+    const stored = analysis.evaluations[nav.index];
+    if (!stored || stored.type !== 'mate' || stored.value === 0) return null;
+    // The move played *from* this position carries the engine's line out of it.
+    const line = analysis.review?.moves[nav.index]?.bestLine ?? [];
+    if (line.length === 0) return null;
+    return { moves: Math.abs(stored.value), winner: stored.value > 0 ? 'White' : 'Black', line };
+  }, [analysis.evaluations, analysis.review, displayFen, exploring, live.lines, nav.index]);
+
+  const stepForward = useCallback(() => {
+    if (!stepper) return;
+    const next = stepper.line[exploration.length - stepper.base];
+    if (next) applyMove(next);
+  }, [applyMove, exploration.length, stepper]);
+
+  const stepBack = useCallback(() => {
+    setExploration((prev) => (prev.length > 0 ? prev.slice(0, -1) : prev));
+  }, []);
+
+  /** Leave the side line entirely and return to the game. */
+  const exitExploration = useCallback(() => {
+    setExploration([]);
+    setStepper(null);
+  }, []);
 
   const avatars = usePlayerAvatars([game?.white.username, game?.black.username]);
 
@@ -479,25 +582,32 @@ export function GameAnalysisPage() {
             </div>
           </div>
 
-          {exploring && (
-            <div className="panel border-brand-500/40 order-2 flex shrink-0 items-center gap-2 px-3 py-2 text-xs">
-              <span className="text-accent font-semibold">Exploring a variation</span>
-              <span className="text-muted">
-                {exploration.length} move{exploration.length === 1 ? '' : 's'} from the game position
-              </span>
-              <button
-                type="button"
-                className="btn btn-ghost ml-auto h-7 px-2 text-xs"
-                onClick={() => setExploration([])}
-              >
-                Back to the game
-              </button>
-            </div>
-          )}
+          {/*
+            Nothing is added to this column while a side line is being explored.
+            A banner here would appear and disappear under the board, and the board
+            is measured from the room this column has left — so it would resize the
+            board every time the user stepped into or out of a variation. The rail
+            carries the state and the way back instead, where it costs no layout.
+          */}
 
           <Panel flush className="order-3 shrink-0">
             <div className="px-2 py-1.5">
-              <GameControls nav={nav} totalMoves={parsed.moves.length} />
+              <GameControls
+                nav={nav}
+                totalMoves={parsed.moves.length}
+                action={
+                  exploring ? (
+                    <button
+                      type="button"
+                      className="btn btn-subtle h-8 min-h-0 gap-1.5 self-center px-2.5 text-xs whitespace-nowrap"
+                      onClick={exitExploration}
+                      title="Leave this line and return to the game"
+                    >
+                      Back to game
+                    </button>
+                  ) : null
+                }
+              />
             </div>
           </Panel>
         </div>
@@ -526,6 +636,86 @@ export function GameAnalysisPage() {
             </>
           ) : (
             <>
+              {/*
+                Forced mate, at the top of the rail where the eye already is. It
+                carries its own walk-through controls, so following a mating
+                sequence never means hunting for them in the engine tab.
+              */}
+              {(mate || stepper || exploring) && (
+                <div className="border-brand-500/40 bg-brand-500/5 shrink-0 border-b px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <CrownIcon size={14} className="text-accent shrink-0" />
+                    <span className="truncate text-sm font-semibold">
+                      {live.terminal === 'checkmate'
+                        ? 'Checkmate'
+                        : mate
+                          ? `Mate in ${mate.moves} for ${mate.winner}`
+                          : stepper
+                            ? 'Mating line'
+                            : 'Exploring a variation'}
+                    </span>
+                    {stepper ? (
+                      <span className="text-muted ml-auto shrink-0 font-mono text-[11px] tabular-nums">
+                        {stepsTaken}/{stepper.line.length}
+                      </span>
+                    ) : exploring ? (
+                      <span className="text-muted ml-auto shrink-0 font-mono text-[11px] tabular-nums">
+                        +{exploration.length}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {stepper ? (
+                    <div className="mt-2 flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-subtle h-7 flex-1 px-2 text-xs"
+                        onClick={stepBack}
+                        disabled={stepsTaken <= 1}
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary h-7 flex-1 px-2 text-xs"
+                        onClick={stepForward}
+                        disabled={stepsLeft <= 0}
+                      >
+                        {stepsLeft > 0 ? 'Next' : 'End'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost h-7 shrink-0 px-2 text-xs"
+                        onClick={exitExploration}
+                      >
+                        Exit
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex items-center gap-1">
+                      {mate && (
+                        <button
+                          type="button"
+                          className="btn btn-primary h-7 flex-1 px-2 text-xs"
+                          onClick={() => stepEngineLine(mate.line)}
+                        >
+                          Step through the mate
+                        </button>
+                      )}
+                      {exploring && (
+                        <button
+                          type="button"
+                          className={cn('btn btn-subtle h-7 px-2 text-xs', !mate && 'flex-1')}
+                          onClick={exitExploration}
+                        >
+                          Back to the game
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/*
                 Feedback on the selected move stays visible above every tab, but
                 it is capped at a share of the rail so a long comment cannot push
@@ -570,11 +760,11 @@ export function GameAnalysisPage() {
                     index={nav.index}
                     onSelect={(index) => {
                       nav.stop();
-                      setExploration([]);
+                      exitExploration();
                       nav.goTo(index);
                     }}
                     exploration={exploration}
-                    onExitExploration={() => setExploration([])}
+                    onExitExploration={exitExploration}
                     openingName={opening?.name ?? null}
                     className="h-full"
                   />
@@ -599,7 +789,12 @@ export function GameAnalysisPage() {
                   ))}
 
                 {tab === 'engine' && (
-                  <EnginePanel fen={displayFen} live={live} onPlayLine={playEngineLine} />
+                  <EnginePanel
+                    fen={displayFen}
+                    live={live}
+                    onPlayLine={playEngineLine}
+                    onStepLine={stepEngineLine}
+                  />
                 )}
 
                 {tab === 'info' && <GameInfo game={game} parsed={parsed} opening={opening} />}

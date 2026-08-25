@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { GameNavigation } from '@/hooks/useGameNavigation';
 import { FlipIcon, PauseIcon, PlayIcon, SkipEnd, SkipStart, ChevronLeft, ChevronRight } from '@/components/ui/Icons';
 import { cn } from '@/utils/cn';
@@ -13,10 +14,12 @@ import { cn } from '@/utils/cn';
 export function GameControls({
   nav,
   totalMoves,
+  action,
   className,
 }: {
   nav: GameNavigation;
   totalMoves: number;
+  action?: ReactNode;
   className?: string;
 }) {
   const step = 'btn btn-subtle h-8 min-h-0 min-w-0 p-0';
@@ -24,7 +27,10 @@ export function GameControls({
   return (
     <div
       className={cn(
-        'grid grid-cols-[repeat(6,minmax(0,1fr))_auto] items-stretch gap-1.5',
+        'grid items-stretch gap-1.5',
+        action
+          ? 'grid-cols-[repeat(6,minmax(0,1fr))_auto_auto]'
+          : 'grid-cols-[repeat(6,minmax(0,1fr))_auto]',
         className,
       )}
     >
@@ -107,6 +113,8 @@ export function GameControls({
       <span className="text-muted self-center pl-1 text-xs whitespace-nowrap tabular-nums">
         {nav.index} / {totalMoves}
       </span>
+
+      {action}
     </div>
   );
 }
