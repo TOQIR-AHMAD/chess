@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ENGINE_LIMITS } from '@/services/stockfish';
 import { useSettings, type BoardTheme } from '@/hooks/useSettings';
-import { maxThreads, supportsThreads } from '@/workers/stockfishWorker';
+import { parallelism } from '@/workers/stockfishWorker';
 import { ChevronDown } from '@/components/ui/Icons';
 import { cn } from '@/utils/cn';
 
@@ -15,7 +15,6 @@ import { cn } from '@/utils/cn';
 export function EngineSettings({ onConfigChange }: { onConfigChange?: () => void }) {
   const settings = useSettings();
   const [open, setOpen] = useState<'engine' | 'thresholds' | 'board' | null>('engine');
-  const threadsAvailable = supportsThreads();
 
   const section = (key: 'engine' | 'thresholds' | 'board', label: string) => (
     <button
@@ -54,21 +53,16 @@ export function EngineSettings({ onConfigChange }: { onConfigChange?: () => void
             onChange={(liveDepth) => settings.updateEngine({ liveDepth })}
           />
           <Slider
-            label="Threads"
-            hint={
-              threadsAvailable
-                ? `Up to ${maxThreads()} on this device.`
-                : 'This browser is not cross-origin isolated, so the engine runs single-threaded.'
-            }
+            label="Parallel searches"
+            hint={`Positions reviewed at once. Up to ${parallelism()} on this device.`}
             value={settings.engine.threads}
             min={1}
-            max={threadsAvailable ? maxThreads() : 1}
-            disabled={!threadsAvailable}
+            max={parallelism()}
             onChange={(threads) => settings.updateEngine({ threads })}
           />
           <Slider
             label="Hash (MB)"
-            hint="Transposition table size."
+            hint="Total transposition table, shared out across the parallel searches."
             value={settings.engine.hash}
             min={ENGINE_LIMITS.hash.min}
             max={ENGINE_LIMITS.hash.max}

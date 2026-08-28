@@ -157,6 +157,8 @@ export interface ClassificationInput {
   secondBestEval: Score | null;
   isBook: boolean;
   legalMoveCount: number;
+  /** Rating of the player who made the move, when the PGN carries one. */
+  moverRating: number | null;
   thresholds: ClassificationThresholds;
 }
 
@@ -172,6 +174,53 @@ export interface ClassificationOutput {
 
 /** Expected points at or above which a side is considered to be winning. */
 const DECISIVE_POINTS = 80;
+
+/**
+ * Brilliancy calibration.
+ *
+ * Chess.com states four things about the label, and only four:
+ *
+ *   1. "A Brilliant move is when you find a good piece sacrifice."
+ *   2. "You should not be in a bad position after a Brilliant move."
+ *   3. "You should not be completely winning even if you hadn't found the move."
+ *   4. The criteria are more lenient for newer players than for higher-rated ones.
+ *
+ * Those four rules are what `isBrilliant` implements. The *numbers* below are ours:
+ * Chess.com does not publish its cutoffs, so these are calibrated against how its
+ * Game Review labels the same games, in the same spirit as the bands above. See
+ * README.md — this is not, and does not claim to be, their algorithm.
+ */
+
+/** Rating at or below which the most generous criteria apply. */
+const BRILLIANT_LENIENT_RATING = 800;
+/** Rating at or above which the strictest criteria apply. */
+const BRILLIANT_STRICT_RATING = 2200;
+/** Multiplier on the sacrifice threshold at master level (rule 1). */
+const BRILLIANT_SACRIFICE_STRICT_SCALE = 1.4;
+/**
+ * Expected points a beginner's sacrifice may give away and still count (rule 1).
+ *
+ * Anchored to Chess.com's own published bands rather than picked: it labels a move
+ * losing up to 0.05 expected points — 5 on this 0-100 scale — as "Good", and rule 1
+ * asks only for a *good* sacrifice, not a perfect one. The slack matters because
+ * our lite engine often disagrees with their full-NNUE one about which move is
+ * best: in the position that prompted this, ours prefers Rxa1+ and scores the
+ * brilliancy 1.3-2.0 points worse depending on the run, so a tighter bar made the
+ * label flicker between reviews of the same game.
+ */
+const BRILLIANT_MAX_LOSS_LENIENT = 5;
+/** Centipawns, mover's point of view: below this the position is "bad" (rule 2). */
+const BRILLIANT_MIN_EVAL_AFTER = -50;
+/**
+ * Centipawns at which the game counts as *completely* winning for rule 3 — roughly
+ * a queen up, or a forced mate (`clampedCp` reports mate as ±1000).
+ *
+ * The bar is deliberately this high. "Completely winning" is not the same as
+ * "winning": a sacrifice found while already a rook up is still a real find, and
+ * Chess.com awards it — its own review calls 15...Nc2+ brilliant in a position
+ * evaluated at -6.5. Only an advantage that plays itself disqualifies the move.
+ */
+const BRILLIANT_ALREADY_WON_CP = 800;
 
 /**
  * Classify a single move.
@@ -258,28 +307,82 @@ function playedContinuation(input: ClassificationInput): string[] {
   return [];
 }
 
+/**
+ * Chess.com's four brilliancy rules, in order.
+ *
+ * The rule that does the most work — and the one most often got wrong — is the
+ * third. "Completely winning even if you hadn't found the move" is a statement
+ * about the **alternative**, not about the position: a sacrifice that creates a
+ * winning position out of an equal one is exactly what the label is for, and
+ * testing the position's own evaluation would throw those away, because the
+ * evaluation before the move already assumes the best move is found. What has to
+ * be merely-not-winning is the line the player would have got by playing something
+ * else. See `bestAlternative`.
+ */
 function isBrilliant(
   input: ClassificationInput,
   ctx: { pointsLoss: number; moverBefore: number; moverAfter: number; sacrifice: number },
 ): boolean {
   const { thresholds } = input;
+  const moverColor: 'w' | 'b' = input.mover === 'white' ? 'w' : 'b';
+
   // A forced move is not a brilliancy, it is the only thing on the board.
   if (input.legalMoveCount <= 1) return false;
-  // Real material must be given up, judged after the forced recaptures.
-  if (ctx.sacrifice < thresholds.brilliantSacrifice) return false;
-  // The engine has to endorse it: near-best, and not merely the least-bad option.
-  if (ctx.pointsLoss > thresholds.excellent) return false;
-  // The sacrifice has to keep the game at least balanced.
-  if (ctx.moverAfter < -50) return false;
-  // Sacrifices while already completely winning are just simplification.
-  if (ctx.moverBefore > 600) return false;
-  // If a quiet alternative was almost as good, the sacrifice was not necessary
-  // brilliance — require the second choice to be clearly worse.
-  if (input.secondBestEval) {
-    const second = clampedCp(toMoverPov(input.secondBestEval, input.mover === 'white' ? 'w' : 'b'));
-    if (ctx.moverAfter - second < 30) return false;
-  }
+
+  // Rule 4: newer players are graded more generously than titled ones.
+  const strictness = ratingStrictness(input.moverRating);
+
+  // Rule 1a — "a piece sacrifice": real material, judged after forced recaptures.
+  const minSacrifice = thresholds.brilliantSacrifice * lerp(1, BRILLIANT_SACRIFICE_STRICT_SCALE, strictness);
+  if (ctx.sacrifice < minSacrifice) return false;
+
+  // Rule 1b — "a *good* one": the engine still has to endorse the move. Anything
+  // that gives away real value is a speculative sacrifice, not a sound one.
+  const maxLoss = Math.max(
+    thresholds.excellent,
+    lerp(BRILLIANT_MAX_LOSS_LENIENT, thresholds.excellent, strictness),
+  );
+  if (ctx.pointsLoss > maxLoss) return false;
+
+  // Rule 2 — "you should not be in a bad position after a Brilliant move."
+  if (ctx.moverAfter < BRILLIANT_MIN_EVAL_AFTER) return false;
+
+  // Rule 3 — "you should not be completely winning even if you hadn't found it."
+  // Falls back to the position's own evaluation at MultiPV 1, where there is no
+  // second line to judge the counterfactual against.
+  const alternative = bestAlternative(input) ?? input.evalBefore;
+  if (clampedCp(toMoverPov(alternative, moverColor)) >= BRILLIANT_ALREADY_WON_CP) return false;
+
   return true;
+}
+
+/**
+ * What the position would have been worth had the player not found this move.
+ *
+ * When the played move is the engine's own first choice, the alternative is its
+ * second line. Otherwise the engine's first choice *is* the alternative, and the
+ * evaluation before the move already reflects it.
+ */
+function bestAlternative(input: ClassificationInput): Score | null {
+  if (input.bestMove === input.uci) return input.secondBestEval;
+  return input.evalBefore;
+}
+
+/**
+ * How strictly to grade this player: 0 at beginner level, 1 at master level.
+ *
+ * An unrated game sits in the middle rather than at either extreme — guessing
+ * "beginner" would sprinkle brilliancies over imported master games, and guessing
+ * "master" would deny them to the club players this tool is mostly used by.
+ */
+function ratingStrictness(rating: number | null): number {
+  if (rating === null || !Number.isFinite(rating)) return 0.5;
+  const span = BRILLIANT_STRICT_RATING - BRILLIANT_LENIENT_RATING;
+  return clamp((rating - BRILLIANT_LENIENT_RATING) / span, 0, 1);
+}
+
+function lerp(from: number, to: number, t: number): number {
+  return from + (to - from) * t;
 }
 
 /**

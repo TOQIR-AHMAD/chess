@@ -85,11 +85,21 @@ export function supportsThreads(): boolean {
   );
 }
 
-export function maxThreads(): number {
-  if (!supportsThreads()) return 1;
+/**
+ * How many cores the engine layer may use.
+ *
+ * Leaves one for the UI and caps the rest for sanity. Unlike `maxThreads()` this is
+ * *not* gated on cross-origin isolation: it sizes a pool of independent
+ * single-threaded workers, which need no `SharedArrayBuffer` and so run everywhere.
+ */
+export function parallelism(): number {
   const cores = typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency ?? 2) : 2;
-  // Leave a core for the UI; the engine gets the rest, capped for sanity.
   return Math.max(1, Math.min(8, cores - 1));
+}
+
+/** Threads a *single* engine may use — requires the multi-threaded build. */
+export function maxThreads(): number {
+  return supportsThreads() ? parallelism() : 1;
 }
 
 export class UciEngine {
@@ -106,12 +116,22 @@ export class UciEngine {
   private disposed = false;
   private engineName = 'Stockfish';
   private readonly onDownloadProgress?: (percent: number) => void;
+  /**
+   * Load the single-threaded build even where the multi-threaded one would run.
+   * Set for engines in a pool: parallelism comes from running several of them, so
+   * each wants exactly one thread and none of the pthread machinery.
+   */
+  private readonly forceSingleThreaded: boolean;
   private onUciOk: (() => void) | null = null;
   /** Pending `isready` round trips, resolved in order by each `readyok`. */
   private readyWaiters: Array<{ resolve: () => void; timer: ReturnType<typeof setTimeout> }> = [];
 
-  constructor(onDownloadProgress?: (percent: number) => void) {
+  constructor(
+    onDownloadProgress?: (percent: number) => void,
+    options: { forceSingleThreaded?: boolean } = {},
+  ) {
     this.onDownloadProgress = onDownloadProgress;
+    this.forceSingleThreaded = options.forceSingleThreaded ?? false;
   }
 
   get name(): string {
@@ -119,7 +139,7 @@ export class UciEngine {
   }
 
   get multiThreaded(): boolean {
-    return supportsThreads();
+    return supportsThreads() && !this.forceSingleThreaded;
   }
 
   /** Boot the worker, hand it the WASM URL and wait for `uciok` + `readyok`. */
@@ -136,7 +156,7 @@ export class UciEngine {
 
       try {
         const base = import.meta.env.BASE_URL ?? '/';
-        const file = supportsThreads() ? MULTI_THREADED : SINGLE_THREADED;
+        const file = this.multiThreaded ? MULTI_THREADED : SINGLE_THREADED;
         const jsUrl = new URL(`${base}engine/${file}`, window.location.href);
         const wasmUrl = new URL(`${base}engine/${file.replace(/\.js$/, '.wasm')}`, window.location.href);
         // The build reads its WASM location from the URL fragment.

@@ -67,7 +67,7 @@ export function EnginePanel({
           <p className="text-muted flex items-center gap-2 text-[11px]">
             <span>Depth {live.depth || '—'}</span>
             {top?.nodes ? <span>{formatCompactNumber(top.nodes)} nodes</span> : null}
-            {live.status.multiThreaded && <span>multi-threaded</span>}
+            {live.status.poolSize > 1 && <span>{live.status.poolSize} engines</span>}
           </p>
         </div>
         <div className="text-right">

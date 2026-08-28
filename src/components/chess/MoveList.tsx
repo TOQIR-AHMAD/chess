@@ -91,11 +91,25 @@ export function MoveList({
     const node = activeRef.current;
     const container = containerRef.current;
     if (!node || !container) return;
-    const nodeTop = node.offsetTop;
+
+    // Measure against the scroll container rather than reading `offsetTop`, which is
+    // relative to the nearest *positioned* ancestor. This container is `static`, so
+    // that ancestor is the document body: `offsetTop` returned page coordinates while
+    // `scrollTop` is container-relative, the "already visible" test could never be
+    // true, and so every selection scrolled — and landed nowhere near the move.
+    const nodeTop =
+      node.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
     const nodeBottom = nodeTop + node.offsetHeight;
-    if (nodeTop < container.scrollTop || nodeBottom > container.scrollTop + container.clientHeight) {
-      container.scrollTo({ top: nodeTop - container.clientHeight / 2, behavior: 'smooth' });
-    }
+    const viewTop = container.scrollTop;
+    const viewBottom = viewTop + container.clientHeight;
+
+    if (nodeTop >= viewTop && nodeBottom <= viewBottom) return;
+
+    const target = nodeTop - (container.clientHeight - node.offsetHeight) / 2;
+    container.scrollTo({
+      top: Math.max(0, Math.min(target, container.scrollHeight - container.clientHeight)),
+      behavior: 'smooth',
+    });
   }, [index]);
 
   if (moves.length === 0) {

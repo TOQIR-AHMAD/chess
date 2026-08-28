@@ -1,13 +1,18 @@
 import type { EngineConfig, SearchResult } from '@/types/analysis';
-import { Priority, UciEngine, maxThreads, supportsThreads } from '@/workers/stockfishWorker';
+import { EnginePool } from '@/workers/enginePool';
+import { Priority, maxThreads, parallelism, supportsThreads } from '@/workers/stockfishWorker';
 
 /**
- * Process-wide engine singleton.
+ * Process-wide engine singleton — a pool of single-threaded Stockfish workers
+ * sharing one priority queue.
  *
- * Booting Stockfish means downloading and instantiating a ~7 MB WASM module, so
- * exactly one instance is shared by the whole app. Interactive searches preempt
- * the background full-game pass inside `UciEngine`, which is why a single engine
- * is enough — and keeps peak memory to one transposition table.
+ * A review is a batch of independent positions, so throughput comes from searching
+ * several of them at once rather than from throwing threads at one of them; see
+ * `EnginePool` for why that is the better trade. Interactive searches preempt the
+ * background pass, so the position the user is looking at is still answered first.
+ *
+ * The whole app shares one pool: booting an engine means instantiating a ~7 MB WASM
+ * module, and nothing is gained by holding two sets of them.
  */
 
 export interface EngineStatus {
@@ -18,6 +23,8 @@ export interface EngineStatus {
   downloadPercent: number | null;
   multiThreaded: boolean;
   maxThreads: number;
+  /** Engines running in parallel; 1 until the pool has booted. */
+  poolSize: number;
 }
 
 export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
@@ -29,9 +36,16 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   // would rather have the old depth-14 speed.
   depth: 18,
   liveDepth: 20,
-  // Use the cores the browser actually allows. `maxThreads()` returns 1 unless the
-  // page is cross-origin isolated, so this is safe everywhere.
-  threads: maxThreads(),
+  // How many positions are searched at once. Each engine in the pool is
+  // single-threaded, so this needs no `SharedArrayBuffer` and applies everywhere —
+  // unlike `maxThreads()`, which is 1 on any page that is not cross-origin isolated.
+  threads: parallelism(),
+  // A *total* budget, divided across the pool (see `EnginePool.setOptions`).
+  //
+  // Deliberately not raised to give each engine what a single engine used to have.
+  // Measured: a three-wide pool at 192 MB total is dramatically slower than at 64,
+  // because three WASM heaps of 64 MB apiece cost more in allocation and cache
+  // pressure than a bigger table wins back on searches this short.
   hash: 64,
   // Depth-only, deliberately. A time cap would make the review depend on the
   // machine running it: a phone would hit the cap several plies shallower than a
@@ -51,7 +65,7 @@ export const ENGINE_LIMITS = {
   multiPv: { min: 1, max: 4 },
 };
 
-let engine: UciEngine | null = null;
+let engine: EnginePool | null = null;
 let status: EngineStatus = {
   state: 'idle',
   name: 'Stockfish',
@@ -59,6 +73,7 @@ let status: EngineStatus = {
   downloadPercent: null,
   multiThreaded: supportsThreads(),
   maxThreads: maxThreads(),
+  poolSize: parallelism(),
 };
 
 const listeners = new Set<(status: EngineStatus) => void>();
@@ -78,28 +93,42 @@ export function subscribeToEngine(listener: (status: EngineStatus) => void): () 
   return () => listeners.delete(listener);
 }
 
-function instance(): UciEngine {
+/**
+ * Pool width is a construction-time property, so a change to the setting has to
+ * rebuild the pool. Tracked here to detect that.
+ */
+let poolSize = 0;
+
+function instance(size: number): EnginePool {
+  if (engine && poolSize !== size) {
+    engine.dispose();
+    engine = null;
+  }
   if (!engine) {
-    engine = new UciEngine((percent) => {
-      publish({ downloadPercent: Math.round(percent) });
+    poolSize = size;
+    engine = new EnginePool({
+      size,
+      onDownloadProgress: (percent) => publish({ downloadPercent: Math.round(percent) }),
     });
   }
   return engine;
 }
 
-/** Boot the engine (idempotent) and apply the given configuration. */
-export async function ensureEngine(config: EngineConfig = DEFAULT_ENGINE_CONFIG): Promise<UciEngine> {
-  const current = instance();
+/** Boot the engine pool (idempotent) and apply the given configuration. */
+export async function ensureEngine(config: EngineConfig = DEFAULT_ENGINE_CONFIG): Promise<EnginePool> {
+  const current = instance(Math.max(1, Math.min(parallelism(), config.threads)));
   if (status.state !== 'ready') publish({ state: 'loading', error: null });
 
   try {
     await current.init();
-    await current.setOptions({
-      threads: supportsThreads() ? config.threads : 1,
-      hash: config.hash,
-      multiPv: config.multiPv,
+    await current.setOptions({ hash: config.hash, multiPv: config.multiPv });
+    publish({
+      state: 'ready',
+      name: current.name,
+      error: null,
+      downloadPercent: null,
+      poolSize: current.size,
     });
-    publish({ state: 'ready', name: current.name, error: null, downloadPercent: null });
     return current;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'The chess engine failed to start.';
@@ -117,26 +146,69 @@ export interface AnalysePositionOptions {
   onUpdate?: (partial: SearchResult) => void;
 }
 
+/**
+ * Positions already searched at a given depth, for the lifetime of the tab.
+ *
+ * Openings repeat relentlessly across one player's games — which is exactly how
+ * this app is used — so the second review of a Sicilian gets its first fifteen
+ * plies for free. Kept in memory rather than in `localStorage`: a few thousand
+ * search results would blow the ~5 MB quota that the completed reviews already
+ * share, and losing the table on reload costs one re-search.
+ *
+ * Only complete batch searches are stored. An interrupted result carries a
+ * shallower line than it claims, and interactive searches want their progressive
+ * `onUpdate` stream rather than an instant answer.
+ */
+const positionCache = new Map<string, SearchResult>();
+/** Bounded so a long session cannot grow it without limit. */
+const POSITION_CACHE_LIMIT = 20_000;
+
+function positionKey(fen: string, depth: number, multiPv: number): string {
+  return `${depth}|${multiPv}|${fen}`;
+}
+
 /** Search a single position. Used for both the batch pass and live analysis. */
 export async function analysePosition(
   fen: string,
   options: AnalysePositionOptions,
 ): Promise<SearchResult> {
+  const multiPv = options.multiPv ?? 1;
+  const priority = options.priority ?? Priority.Batch;
+  const cacheable = priority === Priority.Batch && !options.onUpdate;
+  const key = positionKey(fen, options.depth, multiPv);
+
+  if (cacheable) {
+    const hit = positionCache.get(key);
+    if (hit) return hit;
+  }
+
   const current = await ensureEngine({
     ...DEFAULT_ENGINE_CONFIG,
     depth: options.depth,
     multiPv: options.multiPv ?? DEFAULT_ENGINE_CONFIG.multiPv,
   });
 
-  return current.analyse({
+  const result = await current.analyse({
     fen,
     depth: options.depth,
-    multiPv: options.multiPv ?? 1,
+    multiPv,
     moveTimeMs: options.moveTimeMs,
-    priority: options.priority ?? Priority.Batch,
+    priority,
     signal: options.signal,
     onUpdate: options.onUpdate,
   });
+
+  if (cacheable && !result.interrupted && result.lines.length > 0) {
+    if (positionCache.size >= POSITION_CACHE_LIMIT) positionCache.clear();
+    positionCache.set(key, result);
+  }
+
+  return result;
+}
+
+/** Drop the searched-position table (used when the engine settings change). */
+export function clearPositionCache(): void {
+  positionCache.clear();
 }
 
 /** Stop the running search but keep the engine warm. */
@@ -155,10 +227,11 @@ export async function resetEngineForNewGame(): Promise<void> {
   await engine.newGame();
 }
 
-/** Tear the worker down completely. */
+/** Tear the workers down completely. */
 export function disposeEngine(): void {
   engine?.dispose();
   engine = null;
+  poolSize = 0;
   publish({ state: 'idle', error: null, downloadPercent: null });
 }
 
@@ -177,9 +250,8 @@ export function sanitiseEngineConfig(config: Partial<EngineConfig>): EngineConfi
       ENGINE_LIMITS.liveDepth.max,
       DEFAULT_ENGINE_CONFIG.liveDepth,
     ),
-    threads: supportsThreads()
-      ? clamp(config.threads ?? DEFAULT_ENGINE_CONFIG.threads, 1, maxThreads(), 1)
-      : 1,
+    // Parallel searches, not threads-per-search: valid on every page, isolated or not.
+    threads: clamp(config.threads ?? DEFAULT_ENGINE_CONFIG.threads, 1, parallelism(), 1),
     hash: clamp(config.hash ?? DEFAULT_ENGINE_CONFIG.hash, ENGINE_LIMITS.hash.min, ENGINE_LIMITS.hash.max, DEFAULT_ENGINE_CONFIG.hash),
     moveTimeMs: clamp(
       config.moveTimeMs ?? DEFAULT_ENGINE_CONFIG.moveTimeMs,

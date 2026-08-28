@@ -37,8 +37,12 @@ import { EngineAbortError } from '@/workers/stockfishWorker';
  * 6 — sacrifices are measured once the engine's line has settled, so ordinary
  *     exchanges no longer read as material offered up (and as brilliancies).
  * 7 — a draw by repetition scores 0.00, and the only legal move is "forced".
+ * 9 — brilliancies follow Chess.com's stated rules: the *alternative* decides
+ *     whether the game was already won (and only a completely won one counts),
+ *     and the mover's rating sets how strictly the move is graded. Evaluations
+ *     now come from single-threaded searches, so they no longer vary run to run.
  */
-const ANALYSIS_VERSION = 8;
+const ANALYSIS_VERSION = 9;
 
 export interface AnalyseGameOptions {
   parsed: ParsedGame;
@@ -88,6 +92,13 @@ export function cacheReview(key: string, review: GameReview): void {
   caches.analysis.set(key, review);
 }
 
+/** PGN `WhiteElo`/`BlackElo`, or null when the game carries no rating. */
+function parseRating(value: string | undefined): number | null {
+  if (!value) return null;
+  const rating = Number.parseInt(value, 10);
+  return Number.isFinite(rating) && rating > 0 ? rating : null;
+}
+
 function legalMoveCount(fen: string): number {
   const chess = new Chess();
   try {
@@ -125,69 +136,116 @@ export async function analyseGame(options: AnalyseGameOptions): Promise<GameRevi
   const sanMoves = parsed.moves.map((move) => move.san);
   const bookPlies = bookDepthFor(sanMoves, thresholds.bookDepth);
   const opening = detectOpening(sanMoves, parsed.headers);
+  // Chess.com grades brilliancies more leniently for newer players, so the mover's
+  // rating is part of classifying their move.
+  const ratings = {
+    white: parseRating(parsed.headers.WhiteElo),
+    black: parseRating(parsed.headers.BlackElo),
+  };
 
   const evaluations: Array<Score | null> = new Array(total).fill(null);
   const searches: Array<SearchResult | null> = new Array(total).fill(null);
 
-  for (let i = 0; i < total; i += 1) {
-    if (signal?.aborted) throw new AnalysisCancelled();
-
+  /** Evaluate one position, filling `evaluations[i]` and `searches[i]`. */
+  const analyseIndex = async (i: number): Promise<void> => {
     const fen = positions[i];
     const terminal = terminalScoreInGame(positions, i);
     if (terminal) {
       evaluations[i] = terminal;
-    } else {
-      // Book positions are not in doubt; a shallow look keeps the graph honest
-      // without spending the user's time on settled theory.
-      const depth = i < bookPlies ? Math.min(engine.depth, 10) : engine.depth;
-      try {
-        const result = await analysePosition(fen, {
+      return;
+    }
+
+    // Book positions are not in doubt; a shallow look keeps the graph honest
+    // without spending the user's time on settled theory.
+    const depth = i < bookPlies ? Math.min(engine.depth, 10) : engine.depth;
+    try {
+      const result = await analysePosition(fen, {
+        depth,
+        multiPv: engine.multiPv,
+        moveTimeMs: engine.moveTimeMs || undefined,
+        priority: Priority.Batch,
+        signal,
+      });
+
+      // A preempted search still carries usable (if shallower) lines; retry only
+      // when it produced nothing at all.
+      if (result.lines.length === 0 && result.interrupted && !signal?.aborted) {
+        searches[i] = await analysePosition(fen, {
           depth,
           multiPv: engine.multiPv,
           moveTimeMs: engine.moveTimeMs || undefined,
           priority: Priority.Batch,
           signal,
         });
+      } else {
+        searches[i] = result;
+      }
 
-        // A preempted search still carries usable (if shallower) lines; retry only
-        // when it produced nothing at all.
-        if (result.lines.length === 0 && result.interrupted && !signal?.aborted) {
-          const retry = await analysePosition(fen, {
-            depth,
-            multiPv: engine.multiPv,
-            moveTimeMs: engine.moveTimeMs || undefined,
-            priority: Priority.Batch,
-            signal,
-          });
-          searches[i] = retry;
-        } else {
-          searches[i] = result;
-        }
+      const top = searches[i]?.lines[0];
+      evaluations[i] = top ? toWhitePov(top.score, sideToMove(fen)) : { type: 'cp', value: 0 };
+    } catch (error) {
+      if (error instanceof EngineAbortError || signal?.aborted) throw new AnalysisCancelled();
+      throw error;
+    }
+  };
 
-        const top = searches[i]?.lines[0];
-        evaluations[i] = top ? toWhitePov(top.score, sideToMove(fen)) : { type: 'cp', value: 0 };
+  /**
+   * Feed the engine pool from several positions at once.
+   *
+   * The positions in a game are independent, so this is pure throughput: `width`
+   * of them are in flight at any moment and each worker claims the next index as
+   * it frees up. Indices are handed out in order, so the evaluation graph still
+   * fills in roughly left to right.
+   *
+   * One index at a time, deliberately. Claiming contiguous *blocks* to keep each
+   * engine's transposition table warm across neighbouring positions sounds better
+   * and measures worse — 107s against 83s on a 54-move game — because the opening
+   * is far cheaper than the middlegame, so fixed blocks leave workers idling at
+   * the ends while one grinds through a hard stretch. Load balance beats locality
+   * here.
+   */
+  const width = Math.max(1, Math.min(engine.threads, total));
+  let nextIndex = 0;
+  let completed = 0;
+  let failure: unknown = null;
+
+  const worker = async (): Promise<void> => {
+    while (failure === null) {
+      if (signal?.aborted) throw new AnalysisCancelled();
+      // No await between reading and advancing, so no two workers get the same index.
+      const i = nextIndex;
+      if (i >= total) return;
+      nextIndex += 1;
+
+      try {
+        await analyseIndex(i);
       } catch (error) {
-        if (error instanceof EngineAbortError || signal?.aborted) throw new AnalysisCancelled();
+        // Stop the sibling workers too, rather than letting them run on against a
+        // review that is already going to be thrown away.
+        failure = error;
         throw error;
       }
+
+      completed += 1;
+      report({
+        phase: 'analyzing',
+        completed,
+        total,
+        percent: Math.round((completed / total) * 100),
+        message:
+          completed < total
+            ? `Analysing move ${Math.min(completed, parsed.moves.length)} of ${parsed.moves.length}`
+            : 'Finishing up',
+      });
+      options.onPartial?.(evaluations.slice(), []);
+
+      // Yield to the event loop so the UI stays responsive between positions.
+      await Promise.resolve();
     }
+  };
 
-    const completed = i + 1;
-    report({
-      phase: 'analyzing',
-      completed,
-      total,
-      percent: Math.round((completed / total) * 100),
-      message:
-        i < total - 1
-          ? `Analysing move ${Math.min(i + 1, parsed.moves.length)} of ${parsed.moves.length}`
-          : 'Finishing up',
-    });
-    options.onPartial?.(evaluations.slice(), []);
-
-    // Yield to the event loop so the UI stays responsive between positions.
-    await Promise.resolve();
-  }
+  await Promise.all(Array.from({ length: width }, () => worker()));
+  if (failure !== null) throw failure;
 
   const moves: MoveAnalysis[] = parsed.moves.map((move, index) => {
     const fenBefore = positions[index];
@@ -213,6 +271,7 @@ export async function analyseGame(options: AnalyseGameOptions): Promise<GameRevi
       secondBestEval,
       isBook: index < bookPlies,
       legalMoveCount: legalMoveCount(fenBefore),
+      moverRating: ratings[move.color],
       thresholds,
     });
 
