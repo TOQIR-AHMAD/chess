@@ -52,6 +52,11 @@ export interface EngineConfig {
   /** Optional per-position time cap in ms (0 = depth-only). */
   moveTimeMs: number;
   multiPv: number;
+  /**
+   * Run a fast, time-budgeted sweep before the full-depth one, so a complete
+   * (if provisional) review is on screen in seconds instead of minutes.
+   */
+  quickPass: boolean;
 }
 
 export type MoveClassification =
@@ -157,12 +162,23 @@ export interface GameReview {
   black: AccuracyBreakdown;
   opening: { name: string; eco: string | null; url: string | null } | null;
   completedAt: number;
+  /**
+   * True for the quick pass's output: every field is populated and usable, but it
+   * came from a time-capped search and the full-depth pass may revise it. Never
+   * cached — only the final review is.
+   */
+  preliminary?: boolean;
 }
 
 export type AnalysisPhase = 'idle' | 'loading-engine' | 'analyzing' | 'done' | 'error' | 'cancelled';
 
+/** Which of the two sweeps the progress refers to. */
+export type AnalysisStage = 'quick' | 'full';
+
 export interface AnalysisProgress {
   phase: AnalysisPhase;
+  /** Which sweep is running. `percent` is that sweep's own progress, not the total. */
+  stage: AnalysisStage;
   /** Positions analysed so far. */
   completed: number;
   total: number;

@@ -12,6 +12,8 @@ import { parsePgn } from './pgnParser';
 /** Scores the fake engine returns, in side-to-move point of view, per position index. */
 let scriptedScores: number[] = [];
 let searchedFens: string[] = [];
+/** Every search the pass asked for, in order, with the limits it asked for. */
+let searchCalls: Array<{ fen: string; depth: number; moveTimeMs: number | undefined }> = [];
 /** Set to force a different best move for a given position index. */
 let alternativeBest: Record<number, string> = {};
 
@@ -19,11 +21,17 @@ const GAME = parsePgn('1. e4 e5 2. Nf3 Nc6 *');
 
 vi.mock('./stockfish', () => ({
   Priority: { Batch: 0, Interactive: 10 },
+  QUICK_PASS_BUDGET_MS: 5_000,
+  QUICK_PASS_MAX_DEPTH: 14,
   ensureEngine: vi.fn(async () => ({})),
   resetEngineForNewGame: vi.fn(async () => {}),
   cancelEngineWork: vi.fn(),
-  analysePosition: vi.fn(async (fen: string): Promise<SearchResult> => {
+  analysePosition: vi.fn(async (
+    fen: string,
+    options: { depth: number; moveTimeMs?: number },
+  ): Promise<SearchResult> => {
     searchedFens.push(fen);
+    searchCalls.push({ fen, depth: options.depth, moveTimeMs: options.moveTimeMs });
     const index = GAME.positions.indexOf(fen);
     const score = scriptedScores[index] ?? 0;
     // Default to playing the move the game actually played, so the engine agrees.
@@ -55,17 +63,26 @@ vi.mock('./stockfish', () => ({
   }),
 }));
 
-const { AnalysisCancelled, analyseGame, analysisKey, cacheReview, getCachedReview } = await import(
-  './gameAnalysis'
-);
+const { AnalysisCancelled, analyseGame, analysisKey, cacheReview, getCachedReview, quickMoveTimeMs } =
+  await import('./gameAnalysis');
 
-const ENGINE = { depth: 14, liveDepth: 20, threads: 1, hash: 64, moveTimeMs: 0, multiPv: 1 };
+/** One pass only, so these tests describe the full-depth sweep on its own. */
+const ENGINE = {
+  depth: 14,
+  liveDepth: 20,
+  threads: 1,
+  hash: 64,
+  moveTimeMs: 0,
+  multiPv: 1,
+  quickPass: false,
+};
 // Book detection would classify this whole opening as theory; switch it off so the
 // loss-based classification is what is under test.
 const THRESHOLDS = { ...DEFAULT_THRESHOLDS, bookDepth: 0 };
 
 beforeEach(() => {
   searchedFens = [];
+  searchCalls = [];
   alternativeBest = {};
   // Side-to-move scores: +20, −20, +15, +10, +600 → White POV +20, +20, +15, −10, +600.
   // The last step is the one under test: a level position that collapses to +6.00.
@@ -166,7 +183,7 @@ describe('analyseGame', () => {
     expect(percents).toEqual([...percents].sort((a, b) => a - b));
   });
 
-  it('publishes partial evaluations while it works', async () => {
+  it('publishes partial evaluations while it works, ending with a complete set', async () => {
     const snapshots: number[] = [];
     await analyseGame({
       parsed: GAME,
@@ -174,7 +191,11 @@ describe('analyseGame', () => {
       thresholds: THRESHOLDS,
       onPartial: (evaluations) => snapshots.push(evaluations.filter(Boolean).length),
     });
-    expect(snapshots).toEqual([1, 2, 3, 4, 5]);
+    // Publication is throttled (see PUBLISH_INTERVAL_MS), so how many land depends
+    // on timing — but they only ever grow, and the last one is always the full set.
+    expect(snapshots.length).toBeGreaterThan(0);
+    expect(snapshots).toEqual([...snapshots].sort((a, b) => a - b));
+    expect(snapshots.at(-1)).toBe(GAME.positions.length);
   });
 
   it('throws AnalysisCancelled when the signal is already aborted', async () => {
@@ -194,6 +215,120 @@ describe('analyseGame', () => {
     expect(searchedFens).toHaveLength(mated.positions.length - 1);
     expect(review.evaluations.at(-1)).toEqual({ type: 'mate', value: -1 });
     expect(review.moves.at(-1)?.evalAfter).toEqual({ type: 'mate', value: -1 });
+  });
+});
+
+describe('the quick first pass', () => {
+  /** Deep enough that a quick pass is worth running before it. */
+  const DEEP = { ...ENGINE, depth: 18, quickPass: true };
+
+  it('hands over a complete preliminary review before the full one', async () => {
+    const drafts: Array<{ preliminary?: boolean; moves: number; accuracy: number }> = [];
+    const final = await analyseGame({
+      parsed: GAME,
+      engine: DEEP,
+      thresholds: THRESHOLDS,
+      onPreliminary: (draft) =>
+        drafts.push({
+          preliminary: draft.preliminary,
+          moves: draft.moves.length,
+          accuracy: draft.white.accuracy,
+        }),
+    });
+
+    expect(drafts).toHaveLength(1);
+    // "Complete" is the point: every move classified and both accuracies computed,
+    // not a partially filled review.
+    expect(drafts[0].moves).toBe(GAME.moves.length);
+    expect(drafts[0].preliminary).toBe(true);
+    expect(drafts[0].accuracy).toBeGreaterThan(0);
+    expect(final.preliminary).toBe(false);
+  });
+
+  it('sweeps every position twice — once cheaply, once at the configured depth', async () => {
+    await analyseGame({ parsed: GAME, engine: DEEP, thresholds: THRESHOLDS });
+    expect(searchCalls).toHaveLength(GAME.positions.length * 2);
+
+    const quick = searchCalls.slice(0, GAME.positions.length);
+    const full = searchCalls.slice(GAME.positions.length);
+
+    // The quick pass is bounded by the clock, and capped well short of the target.
+    expect(quick.every((call) => (call.moveTimeMs ?? 0) > 0)).toBe(true);
+    expect(quick.every((call) => call.depth <= 14)).toBe(true);
+    // The full pass is exactly what it was before the quick pass existed.
+    expect(full.every((call) => call.depth === 18)).toBe(true);
+    expect(full.every((call) => call.moveTimeMs === undefined)).toBe(true);
+  });
+
+  it('labels each progress report with the sweep it belongs to', async () => {
+    const stages: string[] = [];
+    await analyseGame({
+      parsed: GAME,
+      engine: DEEP,
+      thresholds: THRESHOLDS,
+      onProgress: (progress) => {
+        if (progress.phase === 'analyzing') stages.push(progress.stage);
+      },
+    });
+    // Throttling decides how many land; the order they arrive in does not change.
+    expect(stages[0]).toBe('quick');
+    expect(stages.at(-1)).toBe('full');
+    expect(stages.lastIndexOf('quick')).toBeLessThan(stages.indexOf('full'));
+  });
+
+  it('is skipped when it is switched off', async () => {
+    await analyseGame({ parsed: GAME, engine: { ...DEEP, quickPass: false }, thresholds: THRESHOLDS });
+    expect(searchCalls).toHaveLength(GAME.positions.length);
+  });
+
+  it('is skipped when the configured depth is no deeper than the quick cap', async () => {
+    // Nothing to pre-empt: the "full" pass is already about as fast as the quick one.
+    await analyseGame({ parsed: GAME, engine: { ...DEEP, depth: 12 }, thresholds: THRESHOLDS });
+    expect(searchCalls).toHaveLength(GAME.positions.length);
+  });
+
+  it('is skipped for a game the pool can take in a couple of rounds', async () => {
+    await analyseGame({ parsed: GAME, engine: { ...DEEP, threads: 4 }, thresholds: THRESHOLDS });
+    expect(searchCalls).toHaveLength(GAME.positions.length);
+  });
+
+  it('reaches the same final review as a single-pass run', async () => {
+    const twoPass = await analyseGame({ parsed: GAME, engine: DEEP, thresholds: THRESHOLDS });
+    searchCalls = [];
+    const onePass = await analyseGame({
+      parsed: GAME,
+      engine: { ...DEEP, quickPass: false },
+      thresholds: THRESHOLDS,
+    });
+
+    expect(twoPass.evaluations).toEqual(onePass.evaluations);
+    expect(twoPass.moves.map((move) => move.classification)).toEqual(
+      onePass.moves.map((move) => move.classification),
+    );
+    expect(twoPass.white.accuracy).toBe(onePass.white.accuracy);
+  });
+});
+
+describe('quickMoveTimeMs', () => {
+  it('spends the budget across the game, wider pools taking longer per position', () => {
+    // 100 positions, 4 at a time, 5s budget → 25 rounds of 200ms, less overhead.
+    expect(quickMoveTimeMs(100, 4, 5_000)).toBe(165);
+    expect(quickMoveTimeMs(100, 8, 5_000)).toBe(365);
+  });
+
+  it('gives the positions still to do whatever is still left of the budget', () => {
+    // Halfway through with more than half the time gone: the rest gets less each.
+    expect(quickMoveTimeMs(50, 4, 2_000)).toBeLessThan(quickMoveTimeMs(50, 4, 3_000));
+  });
+
+  it('clamps rather than producing a useless or wasteful search', () => {
+    // A very long game would otherwise get a few milliseconds per position.
+    expect(quickMoveTimeMs(5_000, 1, 5_000)).toBe(30);
+    // Out of budget entirely: still ask for the floor rather than nothing at all,
+    // since `moveTimeMs: 0` would mean "no cap" and run to full depth.
+    expect(quickMoveTimeMs(50, 4, 0)).toBe(30);
+    // A short game would otherwise be allowed seconds per position.
+    expect(quickMoveTimeMs(4, 8, 5_000)).toBe(400);
   });
 });
 

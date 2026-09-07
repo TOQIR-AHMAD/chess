@@ -11,7 +11,7 @@ move-by-move classification and an accuracy report.
 <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white">
 <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white">
 <img alt="Stockfish" src="https://img.shields.io/badge/Stockfish-18%20WASM-0F172A">
-<img alt="Tests" src="https://img.shields.io/badge/tests-293%20passing-16A34A">
+<img alt="Tests" src="https://img.shields.io/badge/tests-303%20passing-16A34A">
 
 **🔒 No backend · No API key · No account · Nothing uploaded**
 
@@ -39,7 +39,7 @@ move-by-move classification and an accuracy report.
 ```bash
 npm install     # also copies the Stockfish WASM builds into public/engine
 npm run dev     # → http://localhost:5173
-npm test        # 293 unit tests
+npm test        # 303 unit tests
 npm run build   # typecheck + production build
 ```
 
@@ -98,6 +98,12 @@ username → profile + archives → game list → PGN → chess.js
 **Single sweep.** Position `i` is searched once and supplies both "evaluation before move `i`"
 and, negated, "evaluation after move `i-1`" — so N moves cost N+1 searches, not 2N.
 
+**A review in five seconds, then a better one.** The sweep runs twice. The first pass is bounded
+by a *wall-clock budget* rather than a depth — it divides ~5 seconds across the game and adjusts
+as it goes — so a complete review, every move labelled and both accuracies computed, is on screen
+in about five seconds whatever the machine. The full-depth pass then runs behind it and replaces
+what it produced. Only the final review is cached; the provisional one says so on its face.
+
 **An engine pool, not one threaded engine.** A review is a batch of *independent* positions, so
 throughput comes from searching several at once rather than throwing threads at one of them.
 Lazy SMP scales well under linear; K single-threaded engines scale close to linear. Measured
@@ -121,12 +127,15 @@ is why nearly all of it is unit-tested without a DOM.
 | :-- | :-- | :-- |
 | Batch depth | 18 | Shallowest depth whose labels line up with Chess.com |
 | Live depth | 20 | The position on screen |
+| Quick first pass | on | ~5 s to a complete provisional review, then refined |
 | Parallel searches | cores − 1 | Each engine single-threaded |
 | MultiPV | 2 | Needed for *Great* and *Brilliant* |
 | Hash | 64 MB | A **total** budget, divided across the pool |
 
-A 54-move game takes **~90 seconds** on a 4-core laptop. Dropping to depth 14 is roughly 3×
-faster at some cost in agreement with Chess.com's labels. All adjustable in the settings panel.
+On a 4-core laptop a 51-move game shows its **first review in ~4.5 seconds**; the full depth-18
+pass behind it takes ~90 seconds and then replaces it. Turning the quick pass off means waiting
+the full 90 for anything at all. Dropping the depth to 14 is roughly 3× faster at some cost in
+agreement with Chess.com's labels. All adjustable in the settings panel.
 
 Searched positions are cached in memory for the session, so re-analysis is instant and repeated
 openings across a player's games come free.
@@ -158,10 +167,11 @@ storage is unavailable the memory tier keeps working.
 npm test
 ```
 
-293 tests covering PGN parsing (castling, en passant, promotion, clock comments, malformed
+303 tests covering PGN parsing (castling, en passant, promotion, clock comments, malformed
 input), evaluation and mate handling, classification and accuracy, the Chess.com parsers,
-opening detection and transpositions, cache TTL/versioning/eviction, move navigation — and the
-UCI protocol, via a scripted fake engine exercising queueing, preemption and cancellation.
+opening detection and transpositions, cache TTL/versioning/eviction, move navigation, the
+two-pass review and its time budget — and the UCI protocol, via a scripted fake engine
+exercising queueing, preemption and cancellation.
 
 ---
 

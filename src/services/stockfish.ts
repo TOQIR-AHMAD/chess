@@ -55,7 +55,30 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   // stopping the engine once it has proved a mate (`stockfishWorker.ts`).
   moveTimeMs: 0,
   multiPv: 2,
+  // The depth above buys agreement with Chess.com at the cost of minutes. Almost
+  // nobody wants to watch an empty rail for that long before seeing anything, so
+  // a time-budgeted sweep goes first and the full pass refines what it produced.
+  quickPass: true,
 };
+
+/**
+ * Wall-clock target for the quick first pass, measured to a **review on screen**
+ * rather than to the last search finishing — the searching is only most of the
+ * work, and the part the user is waiting for is the whole of it.
+ *
+ * It is a *budget*, not a depth: the per-position time cap is derived from it, the
+ * game's length and the pool width, so the promise holds on a phone and on a
+ * workstation, for a 20-move miniature and a 120-move endgame grind. That a slow
+ * machine reaches a shallower depth is exactly the trade being made — and it is
+ * only defensible because this pass is provisional and gets overwritten.
+ */
+export const QUICK_PASS_BUDGET_MS = 5_000;
+
+/**
+ * Depth ceiling for the quick pass. The time cap is what normally binds; this
+ * only stops cheap opening positions from spending their whole allowance.
+ */
+export const QUICK_PASS_MAX_DEPTH = 14;
 
 export const ENGINE_LIMITS = {
   depth: { min: 8, max: 24 },
@@ -163,8 +186,13 @@ const positionCache = new Map<string, SearchResult>();
 /** Bounded so a long session cannot grow it without limit. */
 const POSITION_CACHE_LIMIT = 20_000;
 
-function positionKey(fen: string, depth: number, multiPv: number): string {
-  return `${depth}|${multiPv}|${fen}`;
+/**
+ * A time-capped search and a depth-only one are different answers to the same
+ * question, so the cap is part of the key: without it the quick pass's shallow,
+ * 60ms result would be handed straight back to the full pass asking for depth 18.
+ */
+function positionKey(fen: string, depth: number, multiPv: number, moveTimeMs: number): string {
+  return `${depth}|${multiPv}|${moveTimeMs}|${fen}`;
 }
 
 /** Search a single position. Used for both the batch pass and live analysis. */
@@ -175,7 +203,7 @@ export async function analysePosition(
   const multiPv = options.multiPv ?? 1;
   const priority = options.priority ?? Priority.Batch;
   const cacheable = priority === Priority.Batch && !options.onUpdate;
-  const key = positionKey(fen, options.depth, multiPv);
+  const key = positionKey(fen, options.depth, multiPv, options.moveTimeMs ?? 0);
 
   if (cacheable) {
     const hit = positionCache.get(key);
@@ -260,5 +288,6 @@ export function sanitiseEngineConfig(config: Partial<EngineConfig>): EngineConfi
       DEFAULT_ENGINE_CONFIG.moveTimeMs,
     ),
     multiPv: clamp(config.multiPv ?? DEFAULT_ENGINE_CONFIG.multiPv, ENGINE_LIMITS.multiPv.min, ENGINE_LIMITS.multiPv.max, DEFAULT_ENGINE_CONFIG.multiPv),
+    quickPass: config.quickPass ?? DEFAULT_ENGINE_CONFIG.quickPass,
   };
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ENGINE_LIMITS } from '@/services/stockfish';
+import { ENGINE_LIMITS, QUICK_PASS_BUDGET_MS } from '@/services/stockfish';
 import { useSettings, type BoardTheme } from '@/hooks/useSettings';
 import { parallelism } from '@/workers/stockfishWorker';
 import { ChevronDown } from '@/components/ui/Icons';
@@ -91,6 +91,12 @@ export function EngineSettings({ onConfigChange }: { onConfigChange?: () => void
               settings.updateEngine({ multiPv });
               onConfigChange?.();
             }}
+          />
+          <Toggle
+            label="Quick first pass"
+            hint={`A complete review in about ${Math.round(QUICK_PASS_BUDGET_MS / 1000)}s, then refined at the depth above. Off: nothing appears until the full pass finishes.`}
+            checked={settings.engine.quickPass}
+            onChange={(quickPass) => settings.updateEngine({ quickPass })}
           />
           <Toggle
             label="Analyse automatically"
@@ -276,33 +282,38 @@ function Slider({
 
 function Toggle({
   label,
+  hint,
   checked,
   onChange,
 }: {
   label: string;
+  hint?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 text-xs font-medium">
-      {label}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={cn(
-          'is-pill relative h-5 w-9 shrink-0 transition-colors',
-          checked ? 'bg-brand-500' : 'bg-[var(--surface-sunken)] ring-1 ring-[var(--border-strong)] ring-inset',
-        )}
-      >
-        <span
+    <label className="block cursor-pointer">
+      <span className="flex items-center justify-between gap-3 text-xs font-medium">
+        {label}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          onClick={() => onChange(!checked)}
           className={cn(
-            'is-pill absolute top-0.5 h-4 w-4 bg-white shadow transition-[left]',
-            checked ? 'left-[1.125rem]' : 'left-0.5',
+            'is-pill relative h-5 w-9 shrink-0 transition-colors',
+            checked ? 'bg-brand-500' : 'bg-[var(--surface-sunken)] ring-1 ring-[var(--border-strong)] ring-inset',
           )}
-        />
-      </button>
+        >
+          <span
+            className={cn(
+              'is-pill absolute top-0.5 h-4 w-4 bg-white shadow transition-[left]',
+              checked ? 'left-[1.125rem]' : 'left-0.5',
+            )}
+          />
+        </button>
+      </span>
+      {hint && <span className="text-muted mt-0.5 block text-[11px] leading-snug">{hint}</span>}
     </label>
   );
 }

@@ -477,6 +477,15 @@ export function GameAnalysisPage() {
       {(analysing || progress.phase === 'error') && (
         <div className="panel mb-2 flex shrink-0 flex-wrap items-center gap-3 px-4 py-2">
           {analysing ? <Spinner size={14} className="text-accent" /> : <CpuIcon size={15} className="text-danger" />}
+          {/*
+            Once the quick pass has landed, the rail is already full of labels and
+            accuracy. Say so, or the running bar reads as "nothing is ready yet".
+          */}
+          {analysis.preliminary && analysing && (
+            <span className="border-brand-500/40 text-accent shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+              Quick review ready
+            </span>
+          )}
           <span className="text-sm">
             {progress.phase === 'error' ? (progress.error ?? 'Analysis failed') : progress.message || 'Preparing…'}
           </span>
@@ -784,7 +793,9 @@ export function GameAnalysisPage() {
                     />
                   ) : (
                     <p className="text-muted px-4 py-8 text-center text-sm">
-                      {analysing ? 'The review appears here once the pass finishes.' : 'This game has not been reviewed yet.'}
+                      {analysing
+                        ? 'The first pass takes a few seconds; the review appears as soon as it lands.'
+                        : 'This game has not been reviewed yet.'}
                     </p>
                   ))}
 

@@ -32,6 +32,18 @@ export function GameReviewPanel({
 
   return (
     <div className={cn('space-y-4 px-4 py-4', className)}>
+      {/*
+        The quick pass produces every number here from a time-capped search. They
+        are worth reading, but a few of them will move when the full pass lands —
+        so the panel says which review this is rather than quietly changing later.
+      */}
+      {review.preliminary && (
+        <p className="border-brand-500/40 bg-brand-500/5 text-secondary rounded-md border px-2.5 py-1.5 text-[11px] leading-snug">
+          <span className="text-accent font-semibold">Quick review.</span> Still refining at full
+          depth — accuracy and a few labels may change.
+        </p>
+      )}
+
       {/* Player columns + headline accuracy. */}
       <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-2 gap-y-2">
         <span />

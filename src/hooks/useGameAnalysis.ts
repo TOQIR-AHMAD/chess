@@ -17,10 +17,16 @@ import { cancelEngineWork } from '@/services/stockfish';
  * settings, so revisiting a game is instant while changing the depth correctly
  * triggers a fresh pass. Partial evaluations are published as they arrive so the
  * graph and evaluation bar fill in while the engine works.
+ *
+ * The pass arrives in two instalments (see `analyseGame`): a complete but
+ * provisional review after a few seconds, then the full-depth one that replaces
+ * it. Both go into `review`; `review.preliminary` says which is on screen, and
+ * only the final one is ever written to the cache.
  */
 
 const IDLE_PROGRESS: AnalysisProgress = {
   phase: 'idle',
+  stage: 'full',
   completed: 0,
   total: 0,
   percent: 0,
@@ -36,6 +42,8 @@ export interface GameAnalysisState {
   progress: AnalysisProgress;
   running: boolean;
   fromCache: boolean;
+  /** True while the review on screen is the quick pass's, still being refined. */
+  preliminary: boolean;
   start: () => void;
   cancel: () => void;
   reset: () => void;
@@ -80,6 +88,7 @@ export function useGameAnalysis(
       setFromCache(true);
       setProgress({
         phase: 'done',
+        stage: 'full',
         completed: parsed.positions.length,
         total: parsed.positions.length,
         percent: 100,
@@ -93,7 +102,10 @@ export function useGameAnalysis(
 
   const start = useCallback(() => {
     if (!parsed || !key) return;
-    if (startedFor.current === key && (review || running)) return;
+    if (running) return;
+    // A finished review for these settings is the end of the road; a preliminary
+    // one is not, so "Try again" after a cancelled refine still restarts.
+    if (startedFor.current === key && review && !review.preliminary) return;
 
     abortRef.current?.abort();
     const abort = new AbortController();
@@ -116,6 +128,12 @@ export function useGameAnalysis(
       onPartial: (partial) => {
         if (!abort.signal.aborted) setEvaluations(partial);
       },
+      // The quick pass's review: shown immediately, never cached.
+      onPreliminary: (draft) => {
+        if (abort.signal.aborted) return;
+        setReview({ ...draft, key });
+        setEvaluations(draft.evaluations);
+      },
     })
       .then((result) => {
         if (abort.signal.aborted) return;
@@ -125,14 +143,17 @@ export function useGameAnalysis(
         setEvaluations(stored.evaluations);
       })
       .catch((error) => {
+        // `startedFor` is deliberately left pointing at this key on both paths.
+        // It is what the auto-start effect checks, and clearing it would have the
+        // effect re-launch the pass the moment the user stopped it — or retry a
+        // failing one forever. Restarting is the buttons' job, and `start()`
+        // allows it because the review left behind is preliminary or absent.
         if (abort.signal.aborted || error instanceof AnalysisCancelled) {
           setProgress((prev) => ({ ...prev, phase: 'cancelled', message: 'Analysis cancelled' }));
-          startedFor.current = null;
           return;
         }
         const message = error instanceof Error ? error.message : 'Analysis failed.';
         setProgress((prev) => ({ ...prev, phase: 'error', error: message, message }));
-        startedFor.current = null;
       })
       .finally(() => {
         if (!abort.signal.aborted) setRunning(false);
@@ -143,7 +164,8 @@ export function useGameAnalysis(
     abortRef.current?.abort();
     cancelEngineWork();
     setRunning(false);
-    startedFor.current = null;
+    // `startedFor` stays set — see the note in the catch above. Stopping the pass
+    // must not hand it straight back to the auto-start effect.
     setProgress((prev) => ({ ...prev, phase: 'cancelled', message: 'Analysis cancelled' }));
   }, []);
 
@@ -171,5 +193,15 @@ export function useGameAnalysis(
     [],
   );
 
-  return { review, evaluations, progress, running, fromCache, start, cancel, reset };
+  return {
+    review,
+    evaluations,
+    progress,
+    running,
+    fromCache,
+    preliminary: review?.preliminary === true,
+    start,
+    cancel,
+    reset,
+  };
 }
