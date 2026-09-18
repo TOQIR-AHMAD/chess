@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { INSIGHTS_PATH } from '@/utils/routes';
 import { extractUsername, isValidUsername } from '@/services/chessComApi';
 import { useSettings } from '@/hooks/useSettings';
 import { useShell } from '@/hooks/useShell';
@@ -11,6 +12,7 @@ import {
   MoonIcon,
   SearchIcon,
   SunIcon,
+  TargetIcon,
 } from './Icons';
 
 /**
@@ -98,6 +100,16 @@ export function Header() {
             spellCheck={false}
           />
         </form>
+
+        {/* Below `lg` the rail is hidden, so its one feature link lives here instead. */}
+        <Link
+          to={INSIGHTS_PATH}
+          className="navbar-btn lg:hidden"
+          title="Strengths & weaknesses"
+          aria-label="Strengths and weaknesses"
+        >
+          <TargetIcon size={18} />
+        </Link>
 
         {/* The current page's own controls land here, via `NavbarActions`. */}
         <div ref={setActionSlot} className="flex items-center gap-1" />

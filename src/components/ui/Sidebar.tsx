@@ -3,9 +3,9 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useShell } from '@/hooks/useShell';
 import { fetchProfile } from '@/services/chessComApi';
-import { playerPath } from '@/utils/routes';
+import { INSIGHTS_PATH, playerPath } from '@/utils/routes';
 import { cn } from '@/utils/cn';
-import { ChartIcon, ClockIcon, CpuIcon, LogoMark, SearchIcon } from './Icons';
+import { ChartIcon, ClockIcon, CpuIcon, LogoMark, SearchIcon, TargetIcon } from './Icons';
 
 /**
  * Persistent left rail: 16rem wide, collapsing to a 4.6rem icon rail. It keeps its
@@ -103,6 +103,11 @@ export function Sidebar() {
         <NavLink to="/" end className="nav-item" title="Analyse">
           <ChartIcon size={18} className="nav-icon" />
           {!collapsed && 'Analyse'}
+        </NavLink>
+
+        <NavLink to={INSIGHTS_PATH} className="nav-item" title="Strengths & weaknesses">
+          <TargetIcon size={18} className="nav-icon" />
+          {!collapsed && 'Strengths & weaknesses'}
         </NavLink>
 
         <a

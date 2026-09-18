@@ -7,7 +7,9 @@ import { ShellProvider } from '@/hooks/useShell';
 import { HomePage } from '@/pages/HomePage';
 import { PlayerPage } from '@/pages/PlayerPage';
 import { GameAnalysisPage } from '@/pages/GameAnalysisPage';
+import { InsightsPage } from '@/pages/InsightsPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { INSIGHTS_PATH } from '@/utils/routes';
 
 export default function App() {
   return (
@@ -26,6 +28,7 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/player/:username" element={<PlayerPage />} />
+                    <Route path={INSIGHTS_PATH} element={<InsightsPage />} />
                     <Route path="/analyze/:username/:gameId" element={<GameAnalysisPage />} />
                     {/* Legacy/short form: no username means we cannot resolve the archive. */}
                     <Route path="/analyze/:username" element={<Navigate to="/" replace />} />

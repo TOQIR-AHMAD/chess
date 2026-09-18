@@ -140,7 +140,9 @@ export function GameAnalysisPage() {
   );
 
   const viewerColor: Color = game?.playerColor ?? 'white';
-  const nav = useGameNavigation(parsed, viewerColor);
+  // `?ply=` opens the game at a given position, e.g. a mistake linked from the insights report.
+  const plyParam = Number.parseInt(searchParams.get('ply') ?? '', 10);
+  const nav = useGameNavigation(parsed, viewerColor, Number.isFinite(plyParam) ? plyParam : 0);
 
   const analysis = useGameAnalysis(
     parsed,

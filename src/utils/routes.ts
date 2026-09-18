@@ -12,7 +12,11 @@ export function playerPath(username: string): string {
   return `/player/${encodeURIComponent(username)}`;
 }
 
-export function analysisPath(username: string, game: Pick<GameSummary, 'id' | 'archive'>): string {
+/** `ply`, when given, opens the review at that position (0 = the start). */
+export function analysisPath(username: string, game: Pick<GameSummary, 'id' | 'archive'>, ply?: number): string {
   const month = `${game.archive.year}-${String(game.archive.month).padStart(2, '0')}`;
-  return `/analyze/${encodeURIComponent(username)}/${encodeURIComponent(game.id)}?m=${month}`;
+  const at = ply !== undefined ? `&ply=${ply}` : '';
+  return `/analyze/${encodeURIComponent(username)}/${encodeURIComponent(game.id)}?m=${month}${at}`;
 }
+
+export const INSIGHTS_PATH = '/insights';

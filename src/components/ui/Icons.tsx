@@ -187,6 +187,20 @@ export const CloseIcon = (props: IconProps) => (
   </Icon>
 );
 
+export const TargetIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1" />
+  </Icon>
+);
+
+export const CheckIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </Icon>
+);
+
 export const StopIcon = (props: IconProps) => (
   <Icon {...props}>
     <rect x="6" y="6" width="12" height="12" rx="2" />
