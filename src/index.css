@@ -205,6 +205,8 @@
    */
   --eval-white: #ffffff;
   --eval-black: #3a3a3c;
+  /* The edge of the evaluation bar's track, so its white end reads on a white card. */
+  --eval-edge: rgb(0 0 0 / 0.1);
 }
 
 .dark {
@@ -217,7 +219,8 @@
   --status-success: #30d158;
 
   --eval-white: #e5e5ea;
-  --eval-black: #2c2c2e;
+  --eval-black: #3a3a3c;
+  --eval-edge: rgb(255 255 255 / 0.1);
 }
 
 @layer base {

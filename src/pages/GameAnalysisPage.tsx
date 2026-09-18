@@ -533,82 +533,89 @@ export function GameAnalysisPage() {
       */}
       <div className="flex flex-col gap-2 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch xl:grid-cols-[minmax(0,1fr)_clamp(360px,24vw,520px)]">
         {/* ---------------- Board column ---------------- */}
-        <div className="contents lg:flex lg:min-h-0 lg:w-full lg:min-w-0 lg:flex-col lg:gap-2">
+        <div className="contents lg:flex lg:min-h-0 lg:w-full lg:min-w-0 lg:flex-col">
           {/*
-            The stage is the room the board is allowed to take — the whole column.
-            The square is measured from it, the smaller of its width and of its
-            height less the name plates and the controls, so neither the bottom
-            name plate nor the controls can ever fall off the screen.
+            The board's card: the name plates, the board and the controls on one
+            surface, running the column's full height level with the analysis card
+            beside it. The board itself stays square and unframed on it.
           */}
-          <div
-            ref={stageRef}
-            className="order-1 flex w-full min-h-0 flex-1 items-center justify-center overflow-hidden"
-          >
+          <div className="panel order-1 flex min-h-0 flex-col p-2 sm:p-3 lg:flex-1">
+            {/*
+              The stage is the room the board is allowed to take — the whole card,
+              inside its padding. The square is measured from it, the smaller of its
+              width and of its height less the name plates and the controls, so
+              neither the bottom name plate nor the controls can fall off the screen.
+            */}
             <div
-              className="w-full max-w-full"
-              style={boardSize !== null ? { width: boardSize + EVAL_COLUMN_WIDTH } : undefined}
+              ref={stageRef}
+              className="flex w-full min-h-0 flex-1 items-center justify-center overflow-hidden"
             >
-              {topStrip && (
-                <PlayerStrip
-                  {...topStrip}
-                  avatar={topStrip.avatar}
-                  clockSeconds={topStrip.clockSeconds}
-                  className={EVAL_COLUMN_OFFSET}
-                />
-              )}
-
               <div
-                className="flex items-stretch gap-1.5"
-                style={boardSize !== null ? { height: boardSize } : undefined}
+                className="w-full max-w-full"
+                style={boardSize !== null ? { width: boardSize + EVAL_COLUMN_WIDTH } : undefined}
               >
-                <EvaluationBar
-                  score={barScore}
-                  orientation={nav.orientation}
-                  pending={barScore === null && live.running}
-                />
-                <div className="min-w-0 flex-1">
-                  <ChessBoard
-                    fen={displayFen}
+                {topStrip && (
+                  <PlayerStrip
+                    {...topStrip}
+                    avatar={topStrip.avatar}
+                    clockSeconds={topStrip.clockSeconds}
+                    className={EVAL_COLUMN_OFFSET}
+                  />
+                )}
+
+                <div
+                  className="flex items-stretch gap-1.5"
+                  style={boardSize !== null ? { height: boardSize } : undefined}
+                >
+                  <EvaluationBar
+                    score={barScore}
                     orientation={nav.orientation}
-                    lastMove={lastMove}
-                    bestMove={bestMoveArrow}
-                    badge={!exploring && currentMoveAnalysis ? currentMoveAnalysis.classification : null}
-                    onMove={handleBoardMove}
-                    theme={settings.boardTheme}
-                    showCoordinates={settings.showCoordinates}
-                    animations={settings.animations}
+                    pending={barScore === null && live.running}
                   />
+                  <div className="min-w-0 flex-1">
+                    <ChessBoard
+                      fen={displayFen}
+                      orientation={nav.orientation}
+                      lastMove={lastMove}
+                      bestMove={bestMoveArrow}
+                      badge={!exploring && currentMoveAnalysis ? currentMoveAnalysis.classification : null}
+                      onMove={handleBoardMove}
+                      theme={settings.boardTheme}
+                      showCoordinates={settings.showCoordinates}
+                      animations={settings.animations}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {bottomStrip && (
-                <PlayerStrip
-                  {...bottomStrip}
-                  avatar={bottomStrip.avatar}
-                  clockSeconds={bottomStrip.clockSeconds}
-                  className={EVAL_COLUMN_OFFSET}
-                />
-              )}
-
-              {/* A flex column, so the panel's margin is inside what is measured. */}
-              <div ref={controlsRef} className="flex flex-col">
-                <div className="panel mt-2 p-1.5">
-                  <GameControls
-                    nav={nav}
-                    totalMoves={parsed.moves.length}
-                    action={
-                      exploring ? (
-                        <button
-                          type="button"
-                          className="btn btn-subtle h-8 min-h-0 self-center px-3 text-[13px] whitespace-nowrap"
-                          onClick={exitExploration}
-                          title="Leave this line and return to the game"
-                        >
-                          Back to game
-                        </button>
-                      ) : null
-                    }
+                {bottomStrip && (
+                  <PlayerStrip
+                    {...bottomStrip}
+                    avatar={bottomStrip.avatar}
+                    clockSeconds={bottomStrip.clockSeconds}
+                    className={EVAL_COLUMN_OFFSET}
                   />
+                )}
+
+                {/* A flex column, so the bar's margin is inside what is measured. */}
+                <div ref={controlsRef} className="flex flex-col">
+                  <div className="mt-2 rounded-xl bg-[var(--fill-4)] p-1">
+                    <GameControls
+                      nav={nav}
+                      totalMoves={parsed.moves.length}
+                      action={
+                        exploring ? (
+                          <button
+                            type="button"
+                            className="btn btn-subtle h-8 min-h-0 self-center px-3 text-[13px] whitespace-nowrap"
+                            onClick={exitExploration}
+                            title="Leave this line and return to the game"
+                          >
+                            Back to game
+                          </button>
+                        ) : null
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -826,12 +833,12 @@ function AnalysisSkeleton({ scanned }: { scanned: number }) {
         <Skeleton className="h-11 w-full rounded-[var(--radius-card)]" />
       </div>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="space-y-3">
+        <div className="panel space-y-2 p-3">
           <div className="flex justify-center gap-2">
-            <Skeleton className="h-[min(60vh,700px)] w-[42px] rounded-none" />
+            <Skeleton className="h-[min(60vh,700px)] w-[42px] rounded-[14px]" />
             <Skeleton className="aspect-square w-full max-w-[min(60vh,700px)] rounded-none" />
           </div>
-          <Skeleton className="h-12 rounded-[var(--radius-card)]" />
+          <Skeleton className="h-11 rounded-xl" />
         </div>
         <div className="space-y-3">
           <Skeleton className="h-40 rounded-[var(--radius-card)]" />
