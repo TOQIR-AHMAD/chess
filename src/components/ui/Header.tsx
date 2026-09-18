@@ -1,28 +1,23 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { INSIGHTS_PATH } from '@/utils/routes';
 import { extractUsername, isValidUsername } from '@/services/chessComApi';
+import { useIsDesktop } from '@/hooks/useMediaQuery';
 import { useSettings } from '@/hooks/useSettings';
 import { useShell } from '@/hooks/useShell';
-import {
-  CompressIcon,
-  ExpandIcon,
-  LogoMark,
-  MenuIcon,
-  MoonIcon,
-  SearchIcon,
-  SunIcon,
-  TargetIcon,
-} from './Icons';
+import { ChevronLeft, CompressIcon, ExpandIcon, MoonIcon, SearchIcon, SidebarIcon, SunIcon } from './Icons';
 
 /**
- * Top navbar for the content column: 4rem tall, translucent over the page, and the
- * same height as the rail's brand block so the two line up across the seam.
+ * The navigation bar over the content column, built the way iOS builds one.
  *
- * Left to right it carries the rail's collapse toggle, the current page's name,
- * then the player search and the icon buttons — full screen and the theme switch.
- * Below `lg` the rail is hidden, so the wordmark appears here instead of the
- * hamburger, which would have nothing to collapse.
+ * At the scroll edge it is clear: the page's own large title does the naming and
+ * the bar carries only its glass buttons. Once content scrolls under it, it takes
+ * the translucent bar material and a hairline, and — when the large title has
+ * gone under too — the page's name in its centre.
+ *
+ * Left to right: the sidebar toggle and a pushed page's back button; the title;
+ * then the player search, the page's own controls, full screen and the appearance
+ * switch, grouped in one glass capsule. The toggle is there on every screen: from
+ * `lg` it puts the docked sidebar away, below that it slides the same sidebar out.
  */
 
 /** Tracks whether the document is currently presented full screen. */
@@ -49,12 +44,43 @@ function useFullscreen(): [boolean, () => void] {
   return [active, toggle];
 }
 
+/** Whether the window has scrolled away from its top edge. */
+function useScrolledPastEdge(): boolean {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      setScrolled(window.scrollY > 2);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    check();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  return scrolled;
+}
+
 export function Header() {
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useSettings();
-  const { collapsed, toggleCollapsed, title, setActionSlot } = useShell();
+  const { resolvedTheme, toggleTheme } = useSettings();
+  const { collapsed, toggleCollapsed, drawerOpen, setDrawerOpen, title, back, largeTitle, setActionSlot } =
+    useShell();
+  const isDesktop = useIsDesktop();
+  const sidebarShown = isDesktop ? !collapsed : drawerOpen;
   const [fullscreen, toggleFullscreen] = useFullscreen();
+  const scrolled = useScrolledPastEdge();
   const [value, setValue] = useState('');
+
+  // While the page's large title is on screen, the bar leaves the naming to it.
+  const titleHidden = largeTitle === 'visible';
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -65,74 +91,80 @@ export function Header() {
   };
 
   return (
-    <header className="navbar">
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        className="navbar-btn hidden lg:inline-flex"
-        title={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
-        aria-label={collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'}
-        aria-expanded={!collapsed}
-      >
-        <MenuIcon size={18} />
-      </button>
+    // A query container: the search field shows only when the bar itself has the room.
+    <header className="navbar @container" data-material={scrolled ? 'true' : 'false'}>
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => (isDesktop ? toggleCollapsed() : setDrawerOpen(!drawerOpen))}
+          className="navbar-btn glass"
+          title={sidebarShown ? 'Hide the sidebar' : 'Show the sidebar'}
+          aria-label={sidebarShown ? 'Hide the sidebar' : 'Show the sidebar'}
+          aria-expanded={sidebarShown}
+        >
+          <SidebarIcon size={19} />
+        </button>
 
-      <Link to="/" className="flex shrink-0 items-center gap-2 lg:hidden" aria-label="Gambit Review home">
-        <LogoMark size={26} />
-      </Link>
+        {/* On a phone the label gives its room to the title and the button is a bare chevron. */}
+        {back && (
+          <Link
+            to={back.to}
+            className="navbar-back glass max-sm:w-9 max-sm:justify-center max-sm:px-0"
+            title={`Back to ${back.label}`}
+            aria-label={`Back to ${back.label}`}
+          >
+            <ChevronLeft size={20} strokeWidth={2.4} className="shrink-0" />
+            <span className="truncate max-sm:hidden">{back.label}</span>
+          </Link>
+        )}
+      </div>
 
-      <h1 className="navbar-title">{title}</h1>
+      <h1 className="navbar-title" data-hidden={titleHidden ? 'true' : 'false'} aria-hidden={titleHidden || undefined}>
+        {title}
+      </h1>
 
-      {/* Everything to the right of the title travels as one group. */}
-      <div className="ml-auto flex items-center gap-1">
-        <form onSubmit={submit} className="relative hidden w-full max-w-xs sm:block">
+      <div className="flex min-w-0 items-center justify-end gap-2">
+        <form onSubmit={submit} role="search" className="relative hidden w-full max-w-[15rem] @3xl:block">
           <SearchIcon
-            size={15}
-            className="text-muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
+            size={16}
+            className="text-muted pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2"
           />
           <input
-            className="input pl-8"
-            placeholder="Search another player…"
+            className="input glass h-9 min-h-0 rounded-full pl-9 text-[15px]"
+            placeholder="Search players"
             value={value}
             onChange={(event) => setValue(event.target.value)}
             aria-label="Search a Chess.com player"
             autoComplete="off"
+            autoCapitalize="off"
             spellCheck={false}
           />
         </form>
 
-        {/* Below `lg` the rail is hidden, so its one feature link lives here instead. */}
-        <Link
-          to={INSIGHTS_PATH}
-          className="navbar-btn lg:hidden"
-          title="Strengths & weaknesses"
-          aria-label="Strengths and weaknesses"
-        >
-          <TargetIcon size={18} />
-        </Link>
+        <div className="bar-group glass">
+          {/* The current page's own controls land here, via `NavbarActions`. */}
+          <div ref={setActionSlot} className="contents" />
 
-        {/* The current page's own controls land here, via `NavbarActions`. */}
-        <div ref={setActionSlot} className="flex items-center gap-1" />
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="navbar-btn hidden sm:inline-flex"
+            title={fullscreen ? 'Exit full screen' : 'Full screen'}
+            aria-label={fullscreen ? 'Exit full screen' : 'Enter full screen'}
+          >
+            {fullscreen ? <CompressIcon size={17} /> : <ExpandIcon size={17} />}
+          </button>
 
-        <button
-          type="button"
-          onClick={toggleFullscreen}
-          className="navbar-btn hidden sm:inline-flex"
-          title={fullscreen ? 'Exit full screen' : 'Full screen'}
-          aria-label={fullscreen ? 'Exit full screen' : 'Enter full screen'}
-        >
-          {fullscreen ? <CompressIcon size={18} /> : <ExpandIcon size={18} />}
-        </button>
-
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="navbar-btn"
-          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-          aria-label="Toggle colour theme"
-        >
-          {theme === 'dark' ? <SunIcon size={18} /> : <MoonIcon size={18} />}
-        </button>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="navbar-btn"
+            title={resolvedTheme === 'dark' ? 'Switch to light appearance' : 'Switch to dark appearance'}
+            aria-label="Toggle appearance"
+          >
+            {resolvedTheme === 'dark' ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+          </button>
+        </div>
       </div>
     </header>
   );

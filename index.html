@@ -3,10 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Inter, on every platform, so the type is the same on a phone, a Mac and a PC. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&display=swap"
       rel="stylesheet"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -14,19 +16,28 @@
       name="description"
       content="Fetch any Chess.com player's games and review them move by move with a Stockfish-powered analysis board, evaluation graph and accuracy report."
     />
-    <meta name="theme-color" content="#0f2d57" />
+    <meta name="theme-color" content="#f2f2f7" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Gambit" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Gambit Review — Chess Game Analysis</title>
     <script>
-      // Apply the persisted theme before first paint to avoid a flash of the wrong theme.
+      // Apply the appearance before first paint, so the wrong theme never flashes.
       (function () {
+        var dark = false;
         try {
-          // Light is the default — it is the admin console's own theme. The OS
-          // preference does not override it, only the theme switch does.
+          // Light unless dark was chosen; 'system' follows the device.
           var stored = localStorage.getItem('gambit:theme');
-          document.documentElement.classList.toggle('dark', stored === 'dark');
+          dark =
+            stored === 'dark' ||
+            (stored === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         } catch (e) {
-          /* storage unavailable — keep the default light theme */
+          /* storage unavailable — keep the light theme */
         }
+        document.documentElement.classList.toggle('dark', dark);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#000000' : '#f2f2f7');
       })();
     </script>
   </head>

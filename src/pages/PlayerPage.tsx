@@ -19,7 +19,8 @@ export function PlayerPage() {
   const player = usePlayer(username);
   const games = usePlayerGames(username);
 
-  usePageTitle(username || 'Player');
+  // Pushed from Search, so the bar offers the way back to it.
+  usePageTitle(username || 'Player', { to: '/', label: 'Search' });
 
   // Recording the visit here rather than in the search form means a deep link,
   // the navbar search and the hero search all feed the rail's recent list.
@@ -58,31 +59,34 @@ export function PlayerPage() {
   const stats = summariseGames(games.filtered);
 
   return (
-    <div className="w-full space-y-4">
-      {player.loading || !player.player ? <PlayerProfileSkeleton /> : <PlayerProfile player={player.player} />}
+    <div className="@container mx-auto w-full max-w-[1200px] space-y-6 pt-1">
+      {/* The profile card and the widget row sit as one group, a tighter step apart. */}
+      <div className="space-y-3">
+        {player.loading || !player.player ? <PlayerProfileSkeleton /> : <PlayerProfile player={player.player} />}
+      </div>
 
       <Panel
         flush
         title={
-          <div className="flex items-baseline gap-2">
+          <div className="min-w-0">
             <h2 className="panel-title">Games</h2>
             {games.filtered.length > 0 && (
-              <span className="text-muted text-[11px]">
+              <p className="text-muted text-[13px] tabular-nums">
                 {stats.wins}W · {stats.losses}L · {stats.draws}D · {stats.winRate}% win rate
-              </span>
+              </p>
             )}
           </div>
         }
         actions={
           games.loadedMonths > 0 && (
-            <span className="text-muted text-[11px]">
+            <span className="text-muted hidden text-right text-[13px] sm:block">
               {games.loadedMonths} of {games.totalMonths} months
               {games.oldestLoaded && ` · back to ${formatMonth(games.oldestLoaded.year, games.oldestLoaded.month)}`}
             </span>
           )
         }
       >
-        <div className="px-4 py-3">
+        <div className="border-b px-4 py-3">
           <GameFilters
             filters={games.filters}
             onChange={games.setFilters}
@@ -130,9 +134,9 @@ export function PlayerPage() {
         {!games.loading && games.page.length > 0 && <GameList games={games.page} viewer={username} />}
 
         {games.loadingMore && (
-          <div className="flex items-center gap-2 px-4 py-3">
-            <Spinner size={14} />
-            <span className="text-muted text-xs">Loading older games…</span>
+          <div className="flex items-center gap-2 border-t px-4 py-3">
+            <Spinner size={14} className="text-muted" />
+            <span className="text-muted text-[13px]">Loading older games…</span>
             <ProgressBar
               value={games.totalMonths > 0 ? (games.loadedMonths / games.totalMonths) * 100 : 0}
               className="ml-2 max-w-32"
@@ -141,34 +145,34 @@ export function PlayerPage() {
         )}
 
         {!games.loading && games.filtered.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-            <span className="text-muted text-xs tabular-nums">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2.5">
+            <span className="text-muted text-[13px] tabular-nums">
               Page {games.pageIndex + 1} of {games.pageCount}
             </span>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
-                className="btn btn-ghost h-8 px-2.5 text-xs"
+                className="btn btn-ghost h-8 gap-0.5 pr-3 pl-2 text-[14px]"
                 onClick={() => games.setPageIndex(games.pageIndex - 1)}
                 disabled={games.pageIndex === 0}
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={16} strokeWidth={2.2} />
                 Previous
               </button>
               <button
                 type="button"
-                className="btn btn-ghost h-8 px-2.5 text-xs"
+                className="btn btn-ghost h-8 gap-0.5 pr-2 pl-3 text-[14px]"
                 onClick={() => games.setPageIndex(games.pageIndex + 1)}
                 disabled={games.pageIndex >= games.pageCount - 1}
               >
                 Next
-                <ChevronRight size={14} />
+                <ChevronRight size={16} strokeWidth={2.2} />
               </button>
               {games.hasMore && (
                 <button
                   type="button"
-                  className="btn btn-subtle h-8 px-2.5 text-xs"
+                  className="btn btn-subtle h-8 px-3 text-[13px]"
                   onClick={games.loadMore}
                   disabled={games.loadingMore}
                 >

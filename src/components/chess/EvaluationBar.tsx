@@ -33,10 +33,8 @@ export function EvaluationBar({ score, orientation, pending, className }: Evalua
     <div
       // `self-stretch` rather than `h-full`: a percentage height would resolve
       // against a parent whose own height is content-driven, collapsing the bar.
-      className={cn(
-        'surface-sunken relative w-[42px] shrink-0 self-stretch overflow-hidden rounded-[3px] border',
-        className,
-      )}
+      // Square and unframed, like the board beside it.
+      className={cn('relative w-[42px] shrink-0 self-stretch overflow-hidden', className)}
       role="img"
       aria-label={score ? `Evaluation ${label}` : 'Evaluation not available yet'}
       title={score ? `Evaluation ${label}` : undefined}
@@ -52,13 +50,13 @@ export function EvaluationBar({ score, orientation, pending, className }: Evalua
       />
 
       {/* Midpoint marker. */}
-      <div className="absolute inset-x-0 top-1/2 h-px bg-black/25" />
+      <div className="absolute inset-x-0 top-1/2 h-px bg-black/20" />
 
       {!pending && label && (
         <span
           className={cn(
-            'absolute inset-x-0 text-center text-xs font-bold tabular-nums',
-            labelAtBottom ? 'bottom-1' : 'top-1',
+            'absolute inset-x-0 text-center text-[12px] font-semibold tabular-nums',
+            labelAtBottom ? 'bottom-1.5' : 'top-1.5',
             bandIsLight ? 'text-eval-black' : 'text-eval-white',
           )}
         >
@@ -68,7 +66,7 @@ export function EvaluationBar({ score, orientation, pending, className }: Evalua
 
       {pending && (
         <span className="absolute inset-0 flex items-center justify-center">
-          <span className="is-pill bg-brand-500 h-1.5 w-1.5 animate-ping" />
+          <span className="bg-brand-500 h-1.5 w-1.5 animate-ping rounded-full" />
         </span>
       )}
     </div>

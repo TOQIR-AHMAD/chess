@@ -5,140 +5,147 @@
 
 @theme {
   /*
-   * The admin-console face. Same stack, same base weight and the same flat
-   * letter-spacing the console's shell uses, so the two products read as one.
+   * Inter — the closest open face to San Francisco, with optical sizes of its
+   * own — on every platform, so a phone, a Mac and a PC all set the same type.
+   * The system faces behind it only cover the moment before it loads.
    */
   --font-sans:
-    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto,
-    Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, 'SFMono-Regular', 'JetBrains Mono', 'Menlo', monospace;
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Accent — the console blue, from the pale tint up to the navy of the rail. */
-  --color-brand-50: #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-200: #bfdbfe;
-  --color-brand-300: #7fb0e8;
-  --color-brand-400: #3b82d6;
-  --color-brand-500: #1a5dba;
-  --color-brand-600: #164e9c;
-  --color-brand-700: #123d78;
-  --color-brand-800: #0f2d57;
-  --color-brand-900: #0b2445;
+  /* The tint: iOS system blue. 500 is the tint itself; dark mode lifts it below. */
+  --color-brand-50: #eaf4ff;
+  --color-brand-100: #d6e9ff;
+  --color-brand-200: #add3ff;
+  --color-brand-300: #6db2ff;
+  --color-brand-400: #3395ff;
+  --color-brand-500: #007aff;
+  --color-brand-600: #0068d9;
+  --color-brand-700: #0056b3;
+  --color-brand-800: #00438c;
+  --color-brand-900: #003166;
 
-  /* The console's slate ramp, shared by the chrome and both themes. */
-  --color-stone-50: #f8fafc;
-  --color-stone-100: #f1f5f9;
-  --color-stone-200: #e2e8f0;
-  --color-stone-300: #cbd5e1;
-  --color-stone-400: #94a3b8;
-  --color-stone-500: #64748b;
-  --color-stone-600: #475569;
-  --color-stone-700: #334155;
-  --color-stone-800: #1e293b;
-  --color-stone-900: #0f172a;
-
-  /*
-   * Square corners, everywhere. The console zeroes the radius on every element,
-   * and that squareness is the most recognisable thing about its surfaces — so
-   * the tokens are 0 and the global rule at the end of this file holds the line
-   * against utility classes.
-   */
-  --radius-panel: 0px;
-  --radius-control: 0px;
-  --radius-large: 0px;
+  /* Inset-grouped sections, fields, and the widget tiles. */
+  --radius-card: 1rem;
+  --radius-control: 0.625rem;
+  --radius-widget: 1.375rem;
 }
 
 /*
- * Surface tokens. Every panel, border and text colour resolves through these, so
- * the two themes stay consistent without per-component overrides.
+ * Surface tokens, named after the iOS semantic colours they stand for. Every
+ * surface, label and hairline resolves through these, so light and dark mode need
+ * no per-component overrides.
  *
- * Light is the primary theme — it is the console's own. Content sits on a slate
- * wash, cards are white and outlined, and the one shadow in the system is the
- * console's soft double drop under a card.
+ * The page is the grouped scheme: a gray field with white sections on it, no
+ * outlines — the difference in value is what separates a card from the page.
  */
 :root {
-  --surface-app: #f1f5f9;
+  color-scheme: light;
+
+  --tint: var(--color-brand-500);
+  /* The tint used as text or a glyph on a page surface. */
+  --accent-ink: var(--color-brand-500);
+
+  /* systemGroupedBackground, and the white sections that sit on it. */
+  --surface-app: #f2f2f7;
   --surface-panel: #ffffff;
-  --surface-raised: #f8fafc;
-  --surface-sunken: #f1f5f9;
-  --surface-hover: #e2e8f0;
-  --border-subtle: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
+  /* Fills inside a section: nested boxes, tracks, the pressed row. */
+  --surface-raised: rgb(116 116 128 / 0.08);
+  --surface-sunken: rgb(118 118 128 / 0.12);
+  --surface-hover: rgb(120 120 128 / 0.12);
+  --surface-pressed: rgb(120 120 128 / 0.2);
 
-  /* The console's card: a hairline outline plus a soft, very wide drop. */
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 18px 40px rgb(15 23 42 / 0.04);
-  --shadow-card-strong: 0 1px 2px rgb(15 23 42 / 0.08), 0 18px 40px rgb(15 23 42 / 0.08);
-
-  /* The rail keeps its navy gradient in both themes. */
-  --surface-rail: linear-gradient(180deg, #0f2d57 0%, #0b2445 100%);
-  --surface-rail-wash: rgb(0 0 0 / 0.2);
-
-  /* Rail geometry, shared by the rail itself and the collapsed variant. */
-  --rail-width: 16rem;
-  --rail-width-collapsed: 4.6rem;
-
-  /* The shell's own measurements: navbar height and content-wrapper padding. */
-  --navbar-height: 4rem;
-  --content-pad-y: 1.5rem;
-  --content-pad-x: 1.75rem;
+  /* systemFill … quaternarySystemFill. */
+  --fill-1: rgb(120 120 128 / 0.2);
+  --fill-2: rgb(120 120 128 / 0.16);
+  --fill-3: rgb(118 118 128 / 0.12);
+  --fill-4: rgb(116 116 128 / 0.08);
 
   /*
-   * Table surfaces. The console's data tables run white under the header rather
-   * than a filled bar, stripe in the palest slate, and take a pale blue on hover.
+   * label, a readable secondary for body copy, secondaryLabel for captions, and
+   * tertiaryLabel for placeholders and disabled glyphs.
    */
-  --surface-thead: #ffffff;
-  --border-table: #e2e8f0;
-  --row-stripe: #f8fafc;
-  --row-hover: #eef6ff;
+  --text-primary: #000000;
+  --text-secondary: rgb(60 60 67 / 0.85);
+  --text-muted: rgb(60 60 67 / 0.6);
+  --text-tertiary: rgb(60 60 67 / 0.3);
+
+  /* separator, and the opaque step used for dashed rules and field edges. */
+  --border-subtle: rgb(60 60 67 / 0.2);
+  --border-strong: rgb(60 60 67 / 0.32);
+
+  /* The selected segment of a segmented control. */
+  --segment-selected: #ffffff;
+
+  /*
+   * Liquid glass: the floating chrome — sidebar, tab bar, bar buttons. Translucent
+   * white over a blur, a hairline ring, a bright top edge and a soft drop.
+   */
+  --glass-bg: rgb(255 255 255 / 0.72);
+  --glass-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.05), 0 10px 30px rgb(0 0 0 / 0.08),
+    inset 0 1px 0 rgb(255 255 255 / 0.6);
+  /* The navigation bar once content scrolls under it. */
+  --bar-bg: rgb(242 242 247 / 0.78);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04);
+
+  /* Shell geometry. */
+  --sidebar-width: 16.5rem;
+  --navbar-height: 3.25rem;
+  --content-pad-y: 0.75rem;
+  --content-pad-x: 1.5rem;
 
   --board-highlight: rgb(255 255 51 / 0.5);
   --board-lastmove: rgb(255 255 51 / 0.38);
   --board-check: rgb(229 57 53 / 0.62);
-
-  /*
-   * Accent ink: the blue used for text and icons sitting on a page surface. It
-   * has to move between the themes — the navy that reads on white would vanish
-   * on the dark ground, and the pale blue that reads there is invisible here.
-   */
-  --accent-ink: var(--color-brand-700);
 }
 
 /*
- * Dark is the same system after nightfall: the navy the rail is cut from becomes
- * the page, cards separate by value, and the blue accent lifts a step so it still
- * carries on a dark ground.
+ * Dark is iOS dark: a true-black page, sections a step up in gray, labels in
+ * white at falling opacities, and every system colour lifted a notch so it still
+ * carries on the dark ground.
  */
 .dark {
-  --surface-app: #0b1220;
-  --surface-panel: #111c2e;
-  --surface-raised: rgb(255 255 255 / 0.06);
-  --surface-sunken: rgb(0 0 0 / 0.25);
-  --surface-hover: rgb(255 255 255 / 0.1);
-  --border-subtle: rgb(255 255 255 / 0.1);
-  --border-strong: rgb(255 255 255 / 0.2);
-  --text-primary: #f8fafc;
-  --text-secondary: rgb(255 255 255 / 0.74);
-  --text-muted: rgb(255 255 255 / 0.52);
+  color-scheme: dark;
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 18px 40px rgb(0 0 0 / 0.22);
-  --shadow-card-strong: 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 40px rgb(0 0 0 / 0.3);
+  --color-brand-300: #8ac3ff;
+  --color-brand-400: #409cff;
+  --color-brand-500: #0a84ff;
+  --color-brand-600: #0077ed;
 
-  --surface-rail: linear-gradient(180deg, #0f2d57 0%, #0b2445 100%);
-  --surface-rail-wash: rgb(0 0 0 / 0.25);
+  --surface-app: #000000;
+  --surface-panel: #1c1c1e;
+  --surface-raised: rgb(118 118 128 / 0.18);
+  --surface-sunken: rgb(118 118 128 / 0.24);
+  --surface-hover: rgb(120 120 128 / 0.24);
+  --surface-pressed: rgb(120 120 128 / 0.36);
 
-  --surface-thead: rgb(255 255 255 / 0.04);
-  --border-table: rgb(255 255 255 / 0.1);
-  --row-stripe: rgb(255 255 255 / 0.03);
-  --row-hover: rgb(26 93 186 / 0.22);
+  --fill-1: rgb(120 120 128 / 0.36);
+  --fill-2: rgb(120 120 128 / 0.32);
+  --fill-3: rgb(118 118 128 / 0.24);
+  --fill-4: rgb(118 118 128 / 0.18);
 
-  --board-highlight: rgb(255 255 51 / 0.5);
-  --board-lastmove: rgb(255 255 51 / 0.38);
+  --text-primary: #ffffff;
+  --text-secondary: rgb(235 235 245 / 0.82);
+  --text-muted: rgb(235 235 245 / 0.6);
+  --text-tertiary: rgb(235 235 245 / 0.3);
+
+  --border-subtle: rgb(84 84 88 / 0.65);
+  --border-strong: rgb(120 120 128 / 0.6);
+
+  --segment-selected: #636366;
+
+  --glass-bg: rgb(40 40 42 / 0.72);
+  --glass-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.09), 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.5),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+  --bar-bg: rgb(0 0 0 / 0.72);
+
+  --shadow-card: none;
+
   --board-check: rgb(229 57 53 / 0.6);
-
-  --accent-ink: var(--color-brand-300);
 }
 
 /*
@@ -163,13 +170,9 @@
 }
 
 /*
- * Move-quality and result palette. Like the board, these do not change between
- * light and dark: a blunder should be the same red in both themes. The two status
- * colours are the console's own — its amber and its rose.
- *
- * The move-quality values are the face colours of the badges in
- * `classificationArt.ts`, so the label, the pill and the badge beside a move are
- * always the same colour.
+ * Move-quality palette. Like the board, these do not change between light and
+ * dark: they are the face colours of the badges in `classificationArt.ts`, so the
+ * label, the pill and the badge beside a move are always the same colour.
  */
 :root {
   --cls-brilliant: #26c2a3;
@@ -184,20 +187,37 @@
   --cls-blunder: #fa412d;
   --cls-missed: #ff7769;
 
-  --result-win: #16a34a;
-  --result-draw: #64748b;
-  --result-loss: #e11d48;
+  /*
+   * Results and status: the iOS system colours. Win and loss take the deeper,
+   * higher-contrast variants of green and red, because they are read as text.
+   */
+  --result-win: #248a3d;
+  --result-draw: #8e8e93;
+  --result-loss: #d70015;
 
-  --status-danger: #e11d48;
-  --status-warning: #f59e0b;
+  --status-danger: #ff3b30;
+  --status-warning: #ff9500;
+  --status-success: #34c759;
 
   /*
-   * The evaluation bar and the side swatches. Neither end is pure black or white:
-   * a full-white bar next to a cream board glares, and full black swallows the
-   * midpoint marker.
+   * The evaluation bar and the side swatches. The black end stops short of black
+   * so the midpoint marker and the label still show against it.
    */
-  --eval-white: #e2e8f0;
-  --eval-black: #334155;
+  --eval-white: #ffffff;
+  --eval-black: #3a3a3c;
+}
+
+.dark {
+  --result-win: #30d158;
+  --result-draw: #98989d;
+  --result-loss: #ff453a;
+
+  --status-danger: #ff453a;
+  --status-warning: #ff9f0a;
+  --status-success: #30d158;
+
+  --eval-white: #e5e5ea;
+  --eval-black: #2c2c2e;
 }
 
 @layer base {
@@ -207,51 +227,62 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     scrollbar-gutter: stable;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     margin: 0;
     background: var(--surface-app);
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-family: var(--font-sans);
-    /* 14px base with the console's medium default weight and flat tracking. */
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: -0.006em;
+    font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     min-height: 100dvh;
   }
 
-  /* Headings take the full-strength colour; body copy stays a step back. */
   h1,
   h2,
   h3 {
     color: var(--text-primary);
-    font-weight: 800;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-brand-500);
-    outline-offset: 2px;
+    outline: 3px solid color-mix(in srgb, var(--tint) 55%, transparent);
+    outline-offset: 1px;
   }
 
   ::selection {
-    background: var(--color-brand-500);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--tint) 28%, transparent);
   }
 
-  /* Slim, theme-aware scrollbars for the scrolling panels. */
+  /* Slim overlay-style scrollbars for the panels that scroll on their own. */
   .scroll-thin {
     scrollbar-width: thin;
-    scrollbar-color: var(--border-strong) transparent;
+    scrollbar-color: var(--fill-1) transparent;
   }
   .scroll-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
   .scroll-thin::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
+    background: var(--fill-1);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 9999px;
   }
   .scroll-thin::-webkit-scrollbar-track {
     background: transparent;
@@ -260,39 +291,98 @@
 
 @layer components {
   /*
-   * The card: white, a hairline outline and the console's soft double drop. The
-   * outline is what separates it from the slate page — the shadow only lifts it.
+   * ---------------------------------------------------------------------------
+   * Sections and cards.
+   * ---------------------------------------------------------------------------
    */
+
+  /* An inset-grouped section: white on the gray page, rounded, no outline. */
   .panel {
     background: var(--surface-panel);
-    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
+    overflow: hidden;
   }
 
-  /* The card header is a paler band, closed off by the same hairline. */
-  .panel-header {
+  /* Header above a section — a bold title, with a count or an action on the right. */
+  .section-header {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.85rem 1rem;
-    background: var(--surface-raised);
-    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 0.25rem 0.5rem;
   }
 
   .panel-title {
-    font-size: 0.95rem;
-    font-weight: 800;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.018em;
     color: var(--text-primary);
   }
 
-  /* Form labels: small, heavy, and a step quieter than the value they name. */
+  /* A header inside a card is a sheet's navigation bar: centred title, actions aside. */
+  .panel-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .panel-header .panel-title {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  /* iOS's 34-point large title. */
+  .large-title {
+    font-size: 34px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    color: var(--text-primary);
+    text-wrap: balance;
+  }
+
+  /* The small tinted line above an editorial title. */
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+
+  /* A grouped list's own header and footer: small, gray, set in from the card edge. */
+  .group-header {
+    display: block;
+    padding: 0 1rem 0.4rem;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 18px;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .group-footer {
+    display: block;
+    padding: 0.4rem 1rem 0;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text-muted);
+  }
+
+  /* Form labels: a caption above the field it names. */
   .field-label {
     display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+    padding-inline: 0.25rem;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
   }
 
   .surface-raised {
@@ -307,466 +397,699 @@
   .text-muted {
     color: var(--text-muted);
   }
+  .text-tertiary {
+    color: var(--text-tertiary);
+  }
 
-  /* Accent text, and the same colour arrived at by hover. */
+  /* Tinted text. */
   .text-accent {
     color: var(--accent-ink);
   }
-  .hover-accent:hover {
-    color: var(--accent-ink);
-  }
-  /* The pale accent wash behind a selected move or a strong accuracy figure. */
+  /* The pale tint wash behind a selected row or a strong accuracy figure. */
   .bg-accent-soft {
-    background: color-mix(in srgb, var(--color-brand-500) 12%, transparent);
+    background: color-mix(in srgb, var(--tint) 12%, transparent);
   }
 
   /*
-   * Buttons. The console's primary is a blue gradient with a darker edge; every
-   * other variant is a flat fill of the same height and weight.
+   * ---------------------------------------------------------------------------
+   * Grouped lists.
+   *
+   * A `.list-group` card holds `.cell` rows; each row after the first draws its
+   * own hairline, set in from the leading edge the way iOS insets separators to
+   * the text. `--cell-inset` moves that edge past an icon.
+   * ---------------------------------------------------------------------------
+   */
+  .list-group {
+    background: var(--surface-panel);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+
+  .cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.625rem 1rem;
+    text-align: left;
+    color: var(--text-primary);
+  }
+  .cell + .cell::before,
+  .list-inset > * + *::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: var(--cell-inset, 1rem);
+    border-top: 1px solid var(--border-subtle);
+    pointer-events: none;
+  }
+  .list-inset > * {
+    position: relative;
+  }
+  :is(a, button, label).cell {
+    cursor: pointer;
+    transition: background-color 150ms ease;
+  }
+  :is(a, button).cell:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+  :is(a, button).cell:active:not(:disabled) {
+    background: var(--surface-pressed);
+  }
+
+  /* The coloured rounded-square glyph at the start of a Settings row. */
+  .cell-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.875rem;
+    height: 1.875rem;
+    border-radius: 0.45rem;
+    color: #ffffff;
+  }
+  /* The disclosure chevron at the end of a row that navigates. */
+  .cell-chevron {
+    flex-shrink: 0;
+    margin-left: auto;
+    color: var(--text-tertiary);
+  }
+
+  .list-row-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .list-row-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* A Contacts-style monogram: initials on a soft gray gradient. */
+  .monogram {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #a5abb8 0%, #858994 100%);
+    color: #ffffff;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1;
+  }
+
+  /*
+   * ---------------------------------------------------------------------------
+   * Buttons.
+   *
+   * Capsules, as iOS draws them: `primary` is the filled prominent style,
+   * `subtle` the tinted fill, `ghost` a borderless tint label, `gray` the neutral
+   * fill. Pressing dims a button rather than darkening it.
+   * ---------------------------------------------------------------------------
    */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
-    font-size: 0.8rem;
-    font-weight: 750;
+    gap: 0.375rem;
+    min-height: 2rem;
+    padding: 0.375rem 0.875rem;
+    border: 0;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 600;
     line-height: 1.2;
-    min-height: 2.05rem;
-    padding: 0.45rem 0.85rem;
-    border: 1px solid transparent;
-    transition:
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease,
-      filter 120ms ease;
-    cursor: pointer;
+    letter-spacing: -0.01em;
     white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      opacity 150ms ease,
+      filter 150ms ease;
+  }
+  .btn:active:not(:disabled) {
+    opacity: 0.7;
   }
   .btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+    opacity: 0.35;
+    cursor: default;
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-700) 100%);
-    border-color: var(--color-brand-700);
+    background: var(--tint);
     color: #ffffff;
   }
   .btn-primary:hover:not(:disabled) {
     filter: brightness(1.08);
   }
 
-  .btn-ghost {
-    background: transparent;
-    color: var(--text-secondary);
-  }
-  .btn-ghost:hover:not(:disabled) {
-    background: var(--surface-hover);
-    color: var(--text-primary);
-  }
-
-  /* The console's secondary: white, outlined, slate ink. */
   .btn-subtle {
-    background: var(--surface-panel);
-    border-color: var(--border-strong);
-    color: var(--text-secondary);
-    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    background: color-mix(in srgb, var(--tint) 14%, transparent);
+    color: var(--accent-ink);
   }
   .btn-subtle:hover:not(:disabled) {
-    background: var(--surface-hover);
-    color: var(--text-primary);
+    background: color-mix(in srgb, var(--tint) 20%, transparent);
   }
 
-  .btn-warning {
-    background: var(--status-warning);
-    border-color: #d97706;
-    color: #ffffff;
+  .btn-ghost {
+    background: transparent;
+    color: var(--accent-ink);
   }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--fill-4);
+  }
+
+  .btn-gray {
+    background: var(--fill-3);
+    color: var(--text-primary);
+  }
+  .btn-gray:hover:not(:disabled) {
+    background: var(--fill-2);
+  }
+
   .btn-danger {
     background: var(--status-danger);
-    border-color: #be123c;
     color: #ffffff;
   }
 
+  /*
+   * A toolbar glyph: tint on nothing, a soft fill under the pointer. The playback
+   * controls and the step buttons are cut from it.
+   */
+  .toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-width: 0;
+    height: 2.25rem;
+    border-radius: 0.625rem;
+    color: var(--accent-ink);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      opacity 150ms ease;
+  }
+  .toolbar-btn:hover:not(:disabled) {
+    background: var(--fill-4);
+  }
+  .toolbar-btn:active:not(:disabled) {
+    background: var(--fill-3);
+  }
+  .toolbar-btn:disabled {
+    color: var(--text-tertiary);
+    cursor: default;
+  }
+
+  /*
+   * ---------------------------------------------------------------------------
+   * Fields.
+   *
+   * Filled, borderless and rounded, like an iOS search field. A select carries
+   * the up-and-down chevron of a pop-up button.
+   * ---------------------------------------------------------------------------
+   */
   .input {
     width: 100%;
-    background: var(--surface-panel);
-    border: 1px solid var(--border-strong);
-    min-height: 2.2rem;
-    padding: 0.4rem 0.75rem;
-    font-size: 0.88rem;
-    font-weight: 600;
+    min-height: 2.25rem;
+    padding: 0.4375rem 0.75rem;
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--fill-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.35;
     color: var(--text-primary);
     transition:
-      border-color 140ms ease,
-      box-shadow 140ms ease,
-      background-color 140ms ease;
-  }
-  .dark .input {
-    background: var(--surface-sunken);
+      box-shadow 150ms ease,
+      background-color 150ms ease;
   }
   .input::placeholder {
     color: var(--text-muted);
-    font-weight: 500;
   }
   .input:focus {
     outline: none;
-    border-color: var(--color-brand-500);
-    box-shadow: 0 0 0 2px rgb(26 93 186 / 0.18);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint) 45%, transparent);
   }
-  /* The large search field: taller, and 16px so mobile does not zoom. */
+  .input[aria-invalid='true'] {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--status-danger) 70%, transparent);
+  }
+  select.input {
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 16' fill='none' stroke='%238e8e93' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 6l3-3 3 3M2 10l3 3 3-3'/%3E%3C/svg%3E");
+    background-position: right 0.7rem center;
+    background-repeat: no-repeat;
+    background-size: 0.55rem 0.9rem;
+    cursor: pointer;
+  }
   .input-lg {
-    font-size: 16px;
+    font-size: 17px;
+    border-radius: 0.75rem;
   }
 
-  /* The console's badge: small, heavy, tightly padded. */
+  /* Capsule badge. */
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.34rem 0.48rem;
-    font-size: 0.72rem;
-    font-weight: 800;
-    line-height: 1;
-  }
-
-  .tab {
-    flex: 1 1 0;
-    padding: 0.7rem 0.5rem;
-    font-size: 0.86rem;
-    font-weight: 650;
-    color: var(--text-muted);
-    border-bottom: 3px solid transparent;
-    transition:
-      color 140ms ease,
-      border-color 140ms ease,
-      background-color 140ms ease;
-    cursor: pointer;
-  }
-  .tab:hover {
-    color: var(--text-primary);
-    background: var(--surface-hover);
-  }
-  .tab[aria-selected='true'] {
-    color: var(--color-brand-700);
-    border-bottom-color: var(--color-brand-500);
-  }
-  .dark .tab[aria-selected='true'] {
-    color: var(--text-primary);
-  }
-  /* Icon over label, so a tab is recognisable before the word is read. */
-  .tab-stacked {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     gap: 0.25rem;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 9999px;
     font-size: 12px;
-  }
-  .tab-stacked[aria-selected='true'] svg {
-    color: var(--color-brand-500);
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: 0;
   }
 
   /*
    * ---------------------------------------------------------------------------
-   * The shell: navy rail, translucent navbar, slate content wrapper.
+   * Segmented control.
    *
-   * This is the admin console's own shell, measurement for measurement — a 16rem
-   * rail collapsing to 4.6rem, a 4rem bar above the content, and content inset by
-   * 1.5rem / 1.75rem. The rail carries its own white washes rather than resolving
-   * through the page tokens, because it is dark in both themes.
+   * A gray track with the selected segment raised on it in white. Hairlines sit
+   * between the unselected segments and drop away beside the selected one. Works
+   * for tabs (`aria-selected`), radios (`aria-checked`) and toggles (`aria-pressed`).
    * ---------------------------------------------------------------------------
    */
-
-  .rail {
-    position: sticky;
-    top: 0;
-    height: 100dvh;
-    width: var(--rail-width);
-    flex-shrink: 0;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--surface-rail);
-    color: #ffffff;
-    transition: width 200ms ease;
-  }
-  .rail-collapsed {
-    width: var(--rail-width-collapsed);
-  }
-
-  /* Brand block: navbar height, so the rail and the bar line up across the seam. */
-  .rail-brand {
+  .segmented {
     display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    height: var(--navbar-height);
-    flex-shrink: 0;
-    padding: 0 1.25rem;
-    border-bottom: 1px solid rgb(255 255 255 / 0.1);
-    color: #ffffff;
+    align-items: stretch;
+    padding: 2px;
+    border-radius: 0.5625rem;
+    background: var(--fill-3);
   }
-  .rail-collapsed .rail-brand {
-    justify-content: center;
-    padding: 0;
-  }
-
-  /* The mark sits on a white tile — the console's one bright spot in the navy. */
-  .rail-brand-mark {
+  .segmented > :is(button, a) {
+    position: relative;
     display: inline-flex;
+    flex: 1 1 0;
     align-items: center;
     justify-content: center;
-    height: 2.25rem;
-    width: 2.25rem;
-    flex-shrink: 0;
-    padding: 0.25rem;
-    background: #ffffff;
-  }
-
-  .rail-brand-copy {
+    gap: 0.3rem;
     min-width: 0;
-  }
-  .rail-brand-copy > span {
-    display: block;
-    font-size: 0.88rem;
-    font-weight: 800;
-    line-height: 1.1;
+    min-height: 1.75rem;
+    padding: 0.1875rem 0.625rem;
+    border-radius: 0.4375rem;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
     white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 200ms ease,
+      box-shadow 200ms ease;
   }
-  .rail-brand-copy small {
-    display: block;
-    margin-top: 0.2rem;
-    font-size: 0.68rem;
+  .segmented > :is(button, a) + :is(button, a)::before {
+    content: '';
+    position: absolute;
+    top: 0.45rem;
+    bottom: 0.45rem;
+    left: -0.5px;
+    width: 1px;
+    background: var(--border-strong);
+    transition: opacity 200ms ease;
+  }
+  .segmented > :is([aria-selected='true'], [aria-checked='true'], [aria-pressed='true']) {
+    background: var(--segment-selected);
+    box-shadow:
+      0 3px 8px rgb(0 0 0 / 0.12),
+      0 3px 1px rgb(0 0 0 / 0.04);
     font-weight: 600;
-    color: rgb(255 255 255 / 0.6);
+  }
+  .segmented > :is([aria-selected='true'], [aria-checked='true'], [aria-pressed='true'])::before,
+  .segmented > :is([aria-selected='true'], [aria-checked='true'], [aria-pressed='true']) + *::before {
+    opacity: 0;
+  }
+  .segmented > :is(button, a):not([aria-selected='true'], [aria-checked='true'], [aria-pressed='true']):hover {
+    background: var(--fill-4);
+  }
+
+  /* The iOS switch: 51 × 31, green when on, with a white knob that slides across. */
+  .switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 51px;
+    height: 31px;
+    border-radius: 9999px;
+    background: var(--fill-2);
+    cursor: pointer;
+    transition: background-color 250ms ease;
+  }
+  .switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 27px;
+    height: 27px;
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow:
+      0 3px 8px rgb(0 0 0 / 0.15),
+      0 3px 1px rgb(0 0 0 / 0.06);
+    transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.1);
+  }
+  .switch[aria-checked='true'] {
+    background: var(--status-success);
+  }
+  .switch[aria-checked='true']::after {
+    transform: translateX(20px);
+  }
+  .switch:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  /*
+   * The iOS slider: a 4px track, tint up to the knob, a white 28px knob. `--fill`
+   * is set by the component — it has to be measured from the knob's centre, which
+   * travels over the track less the knob's own width.
+   */
+  .slider {
+    --fill: 50%;
+    width: 100%;
+    height: 1.75rem;
+    margin: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  .slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 9999px;
+    background: linear-gradient(to right, var(--tint) var(--fill), var(--fill-1) var(--fill));
+  }
+  .slider::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+    margin-top: -12px;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow:
+      0 0.5px 4px rgb(0 0 0 / 0.12),
+      0 6px 13px rgb(0 0 0 / 0.12);
+  }
+  .slider::-moz-range-track {
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--fill-1);
+  }
+  .slider::-moz-range-progress {
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--tint);
+  }
+  .slider::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow:
+      0 0.5px 4px rgb(0 0 0 / 0.12),
+      0 6px 13px rgb(0 0 0 / 0.12);
+  }
+  .slider:focus-visible {
+    outline: none;
+  }
+  .slider:focus-visible::-webkit-slider-thumb {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--tint) 55%, transparent),
+      0 6px 13px rgb(0 0 0 / 0.12);
+  }
+  .slider:focus-visible::-moz-range-thumb {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--tint) 55%, transparent),
+      0 6px 13px rgb(0 0 0 / 0.12);
+  }
+  .slider:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  /* Determinate progress: a thin rounded track, filled with the tint. */
+  .ios-progress {
+    width: 100%;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: var(--fill-1);
+  }
+  .ios-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tint);
+    transition: width 300ms ease-out;
+  }
+
+  /* The activity indicator: eight spokes that step round, never spin smoothly. */
+  .ios-spinner {
+    animation: ios-spinner 0.8s steps(8) infinite;
+  }
+
+  /*
+   * ---------------------------------------------------------------------------
+   * The shell: the floating glass sidebar and the navigation bar. The sidebar is
+   * the same on every screen — docked beside the page from `lg`, and sliding in
+   * over it below that — so a phone navigates exactly as a PC does.
+   * ---------------------------------------------------------------------------
+   */
+  .glass {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .sidebar {
+    display: block;
+    width: var(--sidebar-width);
+    overflow: hidden;
+    border-radius: 1.5rem;
+  }
+  /* Fixed width inside, so nothing reflows while the sidebar animates. */
+  .sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    width: var(--sidebar-width);
+    height: 100%;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.625rem;
+    height: var(--navbar-height);
+    padding: 0 1rem;
+    color: var(--text-primary);
+  }
+  .sidebar-brand-name {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.022em;
     white-space: nowrap;
   }
 
-  .rail-body {
+  .sidebar-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 1rem 0.75rem;
-    scrollbar-width: thin;
-    scrollbar-color: rgb(255 255 255 / 0.25) transparent;
-  }
-  .rail-body::-webkit-scrollbar {
-    width: 6px;
-  }
-  .rail-body::-webkit-scrollbar-thumb {
-    background: rgb(255 255 255 / 0.25);
-  }
-  .rail-collapsed .rail-body {
-    padding-inline: 0.6rem;
+    padding: 0.25rem 0.625rem 1rem;
   }
 
-  /* Who is in view: the console's user panel, named for a chess player instead. */
-  .rail-user {
+  /* The last player viewed, drawn like the account row at the top of Settings. */
+  .sidebar-account {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.625rem;
+    border-radius: 0.875rem;
+    background: var(--fill-4);
+    transition: background-color 150ms ease;
   }
-  .rail-avatar {
-    height: 2.5rem;
-    width: 2.5rem;
-    flex-shrink: 0;
-    border: 2px solid rgb(255 255 255 / 0.2);
-    object-fit: cover;
-  }
-  .rail-avatar-fallback {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgb(255 255 255 / 0.1);
-    color: #ffffff;
-    font-size: 15px;
-    font-weight: 700;
-  }
-  .rail-user-name {
-    display: block;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .rail-user small {
-    display: block;
-    color: rgb(255 255 255 / 0.58);
-    font-size: 11px;
-    font-weight: 600;
+  .sidebar-account:hover {
+    background: var(--fill-3);
   }
 
-  .rail-heading {
-    margin: 1rem 0 0.35rem;
-    padding-inline: 0.75rem;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: rgb(255 255 255 / 0.5);
-  }
-  .rail-divider {
-    margin: 0.75rem 0;
-    border: 0;
-    border-top: 1px solid rgb(255 255 255 / 0.1);
-  }
-
-  /*
-   * Rail entries, at the console's own metrics. Icons are monochrome and inherit
-   * the link colour, so the active row — a flat white wash — is the only thing in
-   * the column that stands out.
-   */
-  .nav-item {
+  .sidebar-item {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.625rem;
     width: 100%;
-    min-height: 2.35rem;
-    padding: 0.55rem 0.75rem;
-    margin-bottom: 0.15rem;
-    font-size: 0.88rem;
-    font-weight: 650;
-    color: rgb(255 255 255 / 0.76);
+    min-height: 2.5rem;
+    margin-bottom: 0.125rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.75rem;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
     transition:
-      background-color 120ms ease,
-      color 120ms ease;
+      background-color 150ms ease,
+      color 150ms ease;
   }
-  .nav-item:hover {
-    background: rgb(255 255 255 / 0.1);
+  .sidebar-item:hover {
+    background: var(--fill-4);
+  }
+  .sidebar-item[aria-current='page'] {
+    background: var(--tint);
     color: #ffffff;
   }
-  .nav-item[aria-current='page'] {
-    background: rgb(255 255 255 / 0.15);
-    color: #ffffff;
-  }
-  .nav-item .nav-icon {
+  .sidebar-item .nav-icon {
     flex-shrink: 0;
-    width: 1.25rem;
-    color: inherit;
+    color: var(--accent-ink);
   }
-  .rail-collapsed .nav-item {
-    justify-content: center;
-    padding-inline: 0;
+  .sidebar-item[aria-current='page'] .nav-icon {
+    color: #ffffff;
+  }
+
+  .sidebar-heading {
+    margin: 1rem 0 0.25rem;
+    padding-inline: 0.625rem;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
   }
 
   /*
-   * Top navbar: white at 92% over the page with a blur behind it, closed off by
-   * the same hairline every other edge in the console uses.
+   * The navigation bar. At the scroll edge it is clear and the page's large title
+   * does the naming; once content passes under it, it takes the bar material, a
+   * hairline, and the title in its centre.
    */
   .navbar {
     position: sticky;
     top: 0;
     z-index: 40;
-    display: flex;
+    display: grid;
+    flex-shrink: 0;
+    /*
+     * The sides never squeeze below their own buttons; they share what is left
+     * equally, which centres the title, and the title gives way first.
+     */
+    grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
     align-items: center;
     gap: 0.75rem;
-    height: var(--navbar-height);
-    flex-shrink: 0;
-    padding: 0 1.25rem;
-    border-bottom: 1px solid var(--border-subtle);
-    background: color-mix(in srgb, var(--surface-panel) 92%, transparent);
-    backdrop-filter: blur(10px);
+    min-height: calc(var(--navbar-height) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) var(--content-pad-x) 0;
+    transition:
+      background-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .navbar[data-material='true'] {
+    background: var(--bar-bg);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 1px 0 var(--border-subtle);
   }
 
   .navbar-title {
-    font-size: 1.12rem;
-    font-weight: 800;
-    color: var(--text-primary);
+    min-width: 0;
+    max-width: 36rem;
     overflow: hidden;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.022em;
+    text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
+    transition: opacity 200ms ease;
+  }
+  .navbar-title[data-hidden='true'] {
+    opacity: 0;
   }
 
+  /* A round bar button; on its own it is a glass disc, in a group it shares one. */
   .navbar-btn {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    height: 2.25rem;
     width: 2.25rem;
-    flex-shrink: 0;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
+    height: 2.25rem;
+    border: 0;
+    border-radius: 9999px;
+    color: var(--text-primary);
     cursor: pointer;
     transition:
-      background-color 120ms ease,
-      color 120ms ease;
+      background-color 150ms ease,
+      color 150ms ease,
+      opacity 150ms ease;
   }
   .navbar-btn:hover {
-    background: var(--surface-hover);
-    color: var(--color-brand-700);
+    background: var(--fill-3);
   }
-  .dark .navbar-btn:hover {
-    color: var(--text-primary);
+  .navbar-btn:active {
+    opacity: 0.6;
   }
-  /*
-   * A navbar button that opens a panel stays lit while that panel is open. Keyed
-   * off `data-active` rather than `aria-expanded`, which the rail toggle also
-   * carries for a quite different meaning.
-   */
+  /* A button that opens a panel stays lit while that panel is open. */
   .navbar-btn[data-active='true'] {
-    background: var(--color-brand-500);
+    background: var(--tint);
     color: #ffffff;
   }
 
-  /*
-   * The content wrapper: the console's slate field, inset 1.5rem / 1.75rem and
-   * tightened to 1rem once the rail drops away.
-   */
+  /* Bar buttons that belong together share one glass capsule. */
+  .bar-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.125rem;
+    border-radius: 9999px;
+  }
+
+  /* The back button: a glass capsule with the chevron and the parent's name. */
+  .navbar-back {
+    display: inline-flex;
+    min-width: 0;
+    max-width: 14rem;
+    align-items: center;
+    gap: 0.125rem;
+    height: 2.25rem;
+    padding: 0 0.875rem 0 0.5rem;
+    border-radius: 9999px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: opacity 150ms ease;
+  }
+  .navbar-back:active {
+    opacity: 0.6;
+  }
+
+  /* The content column. */
   .content-wrapper {
-    background: var(--surface-app);
-    padding: var(--content-pad-y) var(--content-pad-x);
+    padding: var(--content-pad-y) var(--content-pad-x) calc(var(--content-pad-y) + 1rem);
+    padding-left: max(var(--content-pad-x), env(safe-area-inset-left));
+    padding-right: max(var(--content-pad-x), env(safe-area-inset-right));
   }
 
   /*
-   * A page that wants the full width — the analysis workspace — drops the side
-   * inset by marking its root `page-flush`, so the board can run edge to edge.
+   * A page that wants the width — the analysis workspace — marks its root
+   * `page-flush`, and the side inset drops to a sliver so the board can grow.
    */
   .content-wrapper:has(> .page-flush) {
-    padding-inline: 0;
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+    padding-right: max(0.5rem, env(safe-area-inset-right));
   }
 
   /*
-   * The raised list row: icon, bold title, muted subtitle. Used wherever a set of
-   * destinations needs more weight than a plain list.
-   */
-  .list-row {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    width: 100%;
-    background: var(--surface-raised);
-    border: 1px solid var(--border-subtle);
-    padding: 0.75rem 1rem;
-    text-align: left;
-    transition:
-      background-color 120ms ease,
-      border-color 120ms ease;
-  }
-  .list-row:hover {
-    background: var(--row-hover);
-    border-color: var(--color-brand-300);
-  }
-  .list-row-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-  .list-row-sub {
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-
-  /*
+   * ---------------------------------------------------------------------------
    * Move-quality classes. `cls-*` colours the annotation glyph in the move list;
-   * `badge-*` is the filled pill, tinted from the same value so the two always
-   * agree without a second set of colours to keep in sync.
+   * `badge-*` is the tinted capsule, from the same value so the two always agree.
+   * ---------------------------------------------------------------------------
    */
   .cls-brilliant {
     color: var(--cls-brilliant);
@@ -813,9 +1136,8 @@
   .badge-mistake,
   .badge-blunder,
   .badge-missed {
-    background: color-mix(in srgb, var(--badge-tint) 14%, transparent);
+    background: color-mix(in srgb, var(--badge-tint) 16%, transparent);
     color: var(--badge-tint);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--badge-tint) 32%, transparent);
   }
   .badge-brilliant {
     --badge-tint: var(--cls-brilliant);
@@ -865,6 +1187,27 @@
     color: var(--eval-black);
   }
 
+  /*
+   * Captured pieces beside a name. Each glyph carries a hairline halo in the
+   * opposite colour, so a white piece still reads on a light page and a black
+   * one on a dark page.
+   */
+  .captured-white {
+    color: #ffffff;
+    text-shadow:
+      0 0 1px rgb(0 0 0 / 0.75),
+      0 0 1px rgb(0 0 0 / 0.75);
+  }
+  .captured-black {
+    color: #3a3a3c;
+  }
+  .dark .captured-black {
+    color: #1c1c1e;
+    text-shadow:
+      0 0 1px rgb(255 255 255 / 0.8),
+      0 0 1px rgb(255 255 255 / 0.8);
+  }
+
   /* Result and status colours, same treatment. */
   .text-win {
     color: var(--result-win);
@@ -879,48 +1222,254 @@
     color: var(--status-danger);
   }
   .chip-win {
-    background: color-mix(in srgb, var(--result-win) 14%, transparent);
+    background: color-mix(in srgb, var(--result-win) 15%, transparent);
     color: var(--result-win);
   }
   .chip-draw {
-    background: color-mix(in srgb, var(--result-draw) 16%, transparent);
+    background: color-mix(in srgb, var(--result-draw) 18%, transparent);
     color: var(--result-draw);
   }
   .chip-loss {
-    background: color-mix(in srgb, var(--result-loss) 14%, transparent);
+    background: color-mix(in srgb, var(--result-loss) 13%, transparent);
     color: var(--result-loss);
-  }
-  .chip-danger {
-    background: color-mix(in srgb, var(--status-danger) 12%, transparent);
-    color: var(--status-danger);
   }
   /* Also the player-title badge (GM, IM, …), which reads as gold by convention. */
   .chip-warning {
     background: color-mix(in srgb, var(--status-warning) 18%, transparent);
-    color: #b45309;
+    color: #c93400;
   }
   .dark .chip-warning {
     color: var(--status-warning);
   }
+  .chip-purple {
+    background: color-mix(in srgb, #af52de 16%, transparent);
+    color: #8944ab;
+  }
+  .dark .chip-purple {
+    color: #da8fff;
+  }
 
+  /*
+   * Tinted boxes: a pale wash of one system colour, with the label and glyph in a
+   * deeper shade of it. `--tone` is the colour itself, `--tone-ink` the shade
+   * that reads as text on the wash — both lift in dark mode.
+   */
+  .tone-box {
+    background: color-mix(in srgb, var(--tone) 12%, var(--surface-panel));
+  }
+  .dark .tone-box {
+    background: color-mix(in srgb, var(--tone) 20%, var(--surface-panel));
+  }
+  .tone-ink {
+    color: var(--tone-ink);
+  }
+  .tone-blue {
+    --tone: #007aff;
+    --tone-ink: #0062cc;
+  }
+  .tone-orange {
+    --tone: #ff9500;
+    --tone-ink: #b35900;
+  }
+  .tone-yellow {
+    --tone: #ffcc00;
+    --tone-ink: #8f6a00;
+  }
+  .tone-indigo {
+    --tone: #5856d6;
+    --tone-ink: #4845c4;
+  }
+  .tone-green {
+    --tone: #34c759;
+    --tone-ink: #1e7b34;
+  }
+  .tone-pink {
+    --tone: #ff2d55;
+    --tone-ink: #c8163e;
+  }
+  .tone-teal {
+    --tone: #30b0c7;
+    --tone-ink: #0f7c8f;
+  }
+  .dark .tone-blue {
+    --tone: #0a84ff;
+    --tone-ink: #64a8ff;
+  }
+  .dark .tone-orange {
+    --tone: #ff9f0a;
+    --tone-ink: #ffb340;
+  }
+  .dark .tone-yellow {
+    --tone: #ffd60a;
+    --tone-ink: #ffd60a;
+  }
+  .dark .tone-indigo {
+    --tone: #5e5ce6;
+    --tone-ink: #9a98f5;
+  }
+  .dark .tone-green {
+    --tone: #30d158;
+    --tone-ink: #4cd964;
+  }
+  .dark .tone-pink {
+    --tone: #ff375f;
+    --tone-ink: #ff6482;
+  }
+  .dark .tone-teal {
+    --tone: #40c8e0;
+    --tone-ink: #5ac8fa;
+  }
+
+  /* A redacted placeholder: a soft gray block that breathes while it waits. */
   .skeleton {
-    background: linear-gradient(
-      90deg,
-      var(--surface-raised) 25%,
-      var(--surface-hover) 37%,
-      var(--surface-raised) 63%
-    );
-    background-size: 400% 100%;
-    animation: shimmer 1.4s ease infinite;
+    border-radius: 0.5rem;
+    background: var(--fill-3);
+    animation: skeleton-pulse 1.6s ease-in-out infinite;
+  }
+
+  /*
+   * ---------------------------------------------------------------------------
+   * Data tables, drawn as a grouped list: a small gray caption row, no stripes,
+   * inset hairlines between rows and a soft fill under the pointer.
+   * ---------------------------------------------------------------------------
+   */
+  .tbl-head {
+    padding: 0.5rem 1rem 0.4rem;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .tbl-row {
+    position: relative;
+    padding: 0.625rem 1rem;
+    font-size: 14px;
+    transition: background-color 150ms ease;
+  }
+  .tbl-row:hover {
+    background: var(--surface-hover);
+  }
+  li.tbl-row + li.tbl-row::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 1rem;
+    border-top: 1px solid var(--border-subtle);
+    pointer-events: none;
+  }
+  tr.tbl-row + tr.tbl-row > td {
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  /*
+   * ---------------------------------------------------------------------------
+   * Widgets.
+   *
+   * The counter tiles, cut like iOS widgets: a gradient of one system colour, a
+   * label and a small glyph across the top, the figure in SF Rounded below.
+   * ---------------------------------------------------------------------------
+   */
+  .stat-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 8.5rem;
+    padding: 0.875rem 1rem 1rem;
+    overflow: hidden;
+    border-radius: var(--radius-widget);
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+    transition:
+      transform 200ms ease,
+      filter 150ms ease;
+  }
+  .stat-card:hover {
+    filter: brightness(1.04);
+  }
+
+  .stat-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .stat-card-value {
+    margin-top: auto;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-card-label {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: rgb(255 255 255 / 0.95);
+  }
+  /*
+   * Always two lines tall, and never more: the figure above sits at the same height
+   * in every widget of a row, however long each one's note is.
+   */
+  .stat-card-sub {
+    display: -webkit-box;
+    min-height: 2.7em;
+    margin-top: 0.2rem;
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: rgb(255 255 255 / 0.78);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .stat-card-glyph {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    opacity: 0.9;
+  }
+
+  /* The system colours, as the gradients iOS paints its widgets with. */
+  .stat-primary {
+    background: linear-gradient(160deg, #47a6ff 0%, #0a6cff 100%);
+  }
+  .stat-warning {
+    background: linear-gradient(160deg, #ffb340 0%, #ff8a00 100%);
+  }
+  .stat-info {
+    background: linear-gradient(160deg, #7d7bf2 0%, #4f4dd6 100%);
+  }
+  .stat-success {
+    background: linear-gradient(160deg, #4cd964 0%, #25a244 100%);
+  }
+  .stat-teal {
+    background: linear-gradient(160deg, #4fd1e0 0%, #1a9fb8 100%);
+  }
+  .stat-muted {
+    background: linear-gradient(160deg, #a1a1a6 0%, #6e6e73 100%);
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: 100% 50%;
+@keyframes ios-spinner {
+  to {
+    transform: rotate(360deg);
   }
+}
+
+@keyframes skeleton-pulse {
+  0%,
   100% {
-    background-position: 0 50%;
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
   }
 }
 
@@ -936,7 +1485,7 @@
 }
 
 .animate-fade-in {
-  animation: fade-in 200ms ease both;
+  animation: fade-in 220ms ease both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -949,124 +1498,94 @@
   }
 }
 
-@layer components {
-  /*
-   * ---------------------------------------------------------------------------
-   * Data tables.
-   *
-   * The console's list pages: the header is a white band of small, heavy,
-   * uppercase slate labels, rows separate by hairline, stripe in the palest
-   * slate, and take a pale blue wash on hover.
-   * ---------------------------------------------------------------------------
-   */
-  .tbl-head {
-    background: var(--surface-thead);
-    padding: 0.8rem 0.75rem;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    color: var(--text-muted);
-    border-bottom: 1px solid var(--border-table);
-  }
+/*
+ * The capsule shape, kept for the few elements that ask for it by name: the
+ * progress meters and the live-analysis pulse.
+ */
+.is-pill,
+.is-pill::before,
+.is-pill::after {
+  border-radius: 9999px;
+}
 
-  .tbl-row {
-    padding: 0.72rem 0.75rem;
-    font-size: 0.86rem;
-    color: var(--text-secondary);
-    transition: background-color 120ms ease;
-  }
-  .tbl-row:nth-of-type(odd) {
-    background: var(--row-stripe);
-  }
-  .tbl-row:hover {
-    background: var(--row-hover);
-  }
-
-  /*
-   * ---------------------------------------------------------------------------
-   * Counter cards.
-   *
-   * The console's dashboard tiles: a solid block of colour carrying one big
-   * number, its label, and a large watermark glyph bled into the corner, under
-   * the heavier of the two card shadows. The number is the only thing at full
-   * contrast — everything else sits back.
-   * ---------------------------------------------------------------------------
-   */
-  .stat-card {
-    position: relative;
-    display: block;
-    overflow: hidden;
-    padding: 1.15rem;
-    min-height: 8.5rem;
-    color: #ffffff;
-    box-shadow: var(--shadow-card-strong);
-    transition:
-      filter 120ms ease,
-      transform 90ms ease;
-  }
-  .stat-card:hover {
-    filter: brightness(1.06);
-  }
-  .stat-card:active {
-    transform: translateY(1px);
-  }
-
-  .stat-card-value {
-    font-size: 2rem;
-    font-weight: 800;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-  }
-  .stat-card-label {
-    margin-top: 0.15rem;
-    font-size: 0.9rem;
-    font-weight: 750;
-    color: rgb(255 255 255 / 0.88);
-  }
-  .stat-card-sub {
-    margin-top: 0.35rem;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: rgb(255 255 255 / 0.66);
-  }
-
-  /* The watermark: large, low-contrast, and clipped by the card's own overflow. */
-  .stat-card-glyph {
-    position: absolute;
+/*
+ * From `lg` the sidebar is docked: sticky down the left of the page, and the
+ * bar's toggle slides it away entirely, as an iPad's sidebar does.
+ */
+@media (min-width: 1024px) {
+  .sidebar {
+    position: sticky;
     top: 0.5rem;
-    right: 0.6rem;
-    opacity: 0.22;
+    z-index: 30;
+    flex-shrink: 0;
+    align-self: flex-start;
+    height: calc(100dvh - 1rem);
+    margin: 0.5rem 0 0.5rem 0.5rem;
+    transition:
+      width 280ms cubic-bezier(0.32, 0.72, 0, 1),
+      margin 280ms cubic-bezier(0.32, 0.72, 0, 1),
+      opacity 200ms ease;
+  }
+  .sidebar[data-collapsed='true'] {
+    width: 0;
+    margin-inline: 0;
+    opacity: 0;
     pointer-events: none;
   }
-
-  /* The console's four dashboard colours, in its order. */
-  .stat-primary {
-    background: linear-gradient(135deg, var(--color-brand-500) 0%, var(--color-brand-700) 100%);
-  }
-  .stat-warning {
-    background: #f59e0b;
-  }
-  .stat-info {
-    background: linear-gradient(135deg, #2d7fb8 0%, #0f2d57 100%);
-  }
-  .stat-success {
-    background: #16a34a;
-  }
-  .stat-muted {
-    background: var(--color-stone-600);
+  .sidebar-backdrop {
+    display: none;
   }
 }
 
-@media (max-width: 991.98px) {
+/*
+ * Below `lg` the same sidebar slides in over the page from the same toggle,
+ * above a dimmed backdrop, and the insets tighten. Fields are 16px here because
+ * iOS Safari zooms into anything smaller when it takes focus.
+ */
+@media (max-width: 1023.98px) {
   :root {
-    --content-pad-y: 1rem;
     --content-pad-x: 1rem;
   }
 
-  .navbar {
-    padding-inline: 1rem;
+  .input {
+    font-size: 16px;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 0.5rem);
+    bottom: 0.5rem;
+    left: 0.5rem;
+    z-index: 60;
+    max-width: calc(100vw - 3rem);
+    /* More solid than the docked glass: it lies over busy content, not bare page. */
+    background: color-mix(in srgb, var(--surface-panel) 94%, transparent);
+    transform: translateX(calc(-100% - 1rem));
+    visibility: hidden;
+    transition:
+      transform 320ms cubic-bezier(0.32, 0.72, 0, 1),
+      visibility 0s linear 320ms;
+  }
+  .sidebar[data-open='true'] {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform 320ms cubic-bezier(0.32, 0.72, 0, 1),
+      visibility 0s;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgb(0 0 0 / 0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 250ms ease;
+  }
+  .sidebar-backdrop[data-open='true'] {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
@@ -1099,41 +1618,16 @@
     overflow: hidden;
   }
 
-  /*
-   * A shorter bar on a fitted page. The rail's brand block is cut from the same
-   * variable, so the two still line up across the seam.
-   */
+  /* A shorter bar on a fitted page; the sidebar's brand row is cut to match. */
   .app-shell:has(.page-fit) {
     --navbar-height: 3rem;
   }
 
-  /* Tighter than the console's usual inset: the height goes to the board. */
+  /* Tighter than the usual inset: the height goes to the board. */
   .app-shell:has(.page-fit) .content-wrapper {
     min-height: 0;
     overflow: hidden;
-    padding-block: 0.25rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.5rem;
   }
-}
-
-/*
- * ---------------------------------------------------------------------------
- * Square corners.
- *
- * The console zeroes the radius on every element it renders, and this is the
- * same rule — kept last and marked important so Tailwind's `rounded-*`
- * utilities cannot round a corner back. The exceptions below it are the few
- * controls whose shape carries meaning rather than style: the settings switch,
- * the progress meters, and the live-analysis pulse.
- * ---------------------------------------------------------------------------
- */
-*,
-*::before,
-*::after {
-  border-radius: 0 !important;
-}
-
-.is-pill,
-.is-pill::before,
-.is-pill::after {
-  border-radius: 9999px !important;
 }

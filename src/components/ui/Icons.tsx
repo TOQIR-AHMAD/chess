@@ -1,8 +1,10 @@
-import type { SVGProps } from 'react';
+import { useId, type SVGProps } from 'react';
 
 /**
- * Original inline icon set. Everything is a stroked 24×24 path so icons inherit
- * `currentColor` and stay crisp at any size — no icon font, no third-party assets.
+ * Original inline icon set, drawn in the manner of SF Symbols. Everything is a
+ * 24×24 path so icons inherit `currentColor` and stay crisp at any size — no icon
+ * font, no third-party assets. Outlines are the default; the transport controls
+ * are filled, as they are on iOS.
  */
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
@@ -52,27 +54,28 @@ export const ChevronDown = (props: IconProps) => (
 
 export const SkipStart = (props: IconProps) => (
   <Icon {...props}>
-    <path d="M18 5 8 12l10 7z" />
-    <path d="M6 5v14" />
+    <path d="M18.5 5.5 9 12l9.5 6.5z" fill="currentColor" />
+    <path d="M6 5.5v13" strokeWidth={2.4} />
   </Icon>
 );
 
 export const SkipEnd = (props: IconProps) => (
   <Icon {...props}>
-    <path d="M6 5l10 7-10 7z" />
-    <path d="M18 5v14" />
+    <path d="M5.5 5.5 15 12l-9.5 6.5z" fill="currentColor" />
+    <path d="M18 5.5v13" strokeWidth={2.4} />
   </Icon>
 );
 
 export const PlayIcon = (props: IconProps) => (
   <Icon {...props}>
-    <path d="M7 4.5 19 12 7 19.5z" />
+    <path d="M7.5 5.2v13.6a.8.8 0 0 0 1.2.7l11-6.8a.8.8 0 0 0 0-1.4l-11-6.8a.8.8 0 0 0-1.2.7z" fill="currentColor" />
   </Icon>
 );
 
 export const PauseIcon = (props: IconProps) => (
   <Icon {...props}>
-    <path d="M8 5v14M16 5v14" />
+    <rect x="6.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" />
+    <rect x="14" y="5" width="3.5" height="14" rx="1" fill="currentColor" />
   </Icon>
 );
 
@@ -98,10 +101,12 @@ export const MoonIcon = (props: IconProps) => (
   </Icon>
 );
 
+/** gearshape: a ring with eight square teeth, drawn as one dashed stroke. */
 export const SettingsIcon = (props: IconProps) => (
   <Icon {...props}>
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 2.5v2.2M12 19.3v2.2M4.2 7.1l1.9 1.1M17.9 15.8l1.9 1.1M4.2 16.9l1.9-1.1M17.9 8.2l1.9-1.1" />
+    <circle cx="12" cy="12" r="6.6" />
+    <circle cx="12" cy="12" r="8.35" strokeWidth={2.5} strokeDasharray="2.9 3.66" strokeDashoffset="1.45" strokeLinecap="butt" />
+    <circle cx="12" cy="12" r="2.4" />
   </Icon>
 );
 
@@ -201,38 +206,78 @@ export const CheckIcon = (props: IconProps) => (
   </Icon>
 );
 
+/* --- Profile facts. --- */
+
+export const GlobeIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3c2.5 2.6 3.7 5.6 3.7 9s-1.2 6.4-3.7 9c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3z" />
+  </Icon>
+);
+
+export const MapPinIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+    <circle cx="12" cy="10" r="2.3" />
+  </Icon>
+);
+
+export const CalendarIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+    <path d="M3.5 10h17" />
+    <path d="M8 3v4M16 3v4" />
+  </Icon>
+);
+
+export const UsersIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <circle cx="9" cy="8.5" r="3.3" />
+    <path d="M3 19.5c.6-3.2 3-5.2 6-5.2s5.4 2 6 5.2" />
+    <path d="M15.5 5.4a3.2 3.2 0 0 1 0 6.2" />
+    <path d="M17.5 14.6c1.8.7 3 2.4 3.5 4.9" />
+  </Icon>
+);
+
 export const StopIcon = (props: IconProps) => (
   <Icon {...props}>
     <rect x="6" y="6" width="12" height="12" rx="2" />
   </Icon>
 );
 
-/** Wordmark glyph: a stylised knight built from straight strokes. */
-export const LogoMark = ({ size = 26, ...props }: IconProps) => (
-  <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true" {...props}>
-    <rect width="32" height="32" fill="url(#gambit-logo)" />
-    <path
-      d="M11 24h11c0-4.2-1-6.9-3.2-8.9l1.6-3.4-3-1.1-1.3 2.2-2.4-2.4L11 13.4c-1.2 1.3-1.4 2.6-.6 3.9l2.6-1.6.9 1.4-3.3 2c-.4 1.6-.2 3.2.4 4.9z"
-      fill="#ffffff"
-      fillOpacity="0.95"
-    />
-    <defs>
-      {/* The console's primary gradient, so the mark and its buttons agree. */}
-      <linearGradient id="gambit-logo" x1="0" y1="0" x2="32" y2="32">
-        <stop stopColor="#1a5dba" />
-        <stop offset="1" stopColor="#0f2d57" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
+/**
+ * The app icon: a white knight on the tint, in the iOS icon shape — corners at
+ * 22.5% of the side, and a vertical gradient that is lighter at the top.
+ */
+export const LogoMark = ({ size = 26, ...props }: IconProps) => {
+  // Several marks can be on screen at once; each needs its own gradient id.
+  const gradient = `gambit-logo-${useId()}`;
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true" {...props}>
+      <rect width="32" height="32" rx="7.2" fill={`url(#${gradient})`} />
+      <path
+        d="M11 24h11c0-4.2-1-6.9-3.2-8.9l1.6-3.4-3-1.1-1.3 2.2-2.4-2.4L11 13.4c-1.2 1.3-1.4 2.6-.6 3.9l2.6-1.6.9 1.4-3.3 2c-.4 1.6-.2 3.2.4 4.9z"
+        fill="#ffffff"
+      />
+      <defs>
+        <linearGradient id={gradient} x1="16" y1="0" x2="16" y2="32" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#45a6ff" />
+          <stop offset="1" stopColor="#0062e0" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+};
 
-/* --- Shell chrome: the navbar's hamburger and its right-hand icon buttons. --- */
+/* --- Shell chrome: the sidebar toggle and the bar's right-hand buttons. --- */
 
-export const MenuIcon = (props: IconProps) => (
+/** sidebar.left: the toggle that shows and hides the sidebar, as on iPad. */
+export const SidebarIcon = (props: IconProps) => (
   <Icon {...props}>
-    <path d="M4 6h16" />
-    <path d="M4 12h16" />
-    <path d="M4 18h16" />
+    <rect x="3" y="4.5" width="18" height="15" rx="3.2" />
+    <path d="M9.5 4.5v15" />
+    <path d="M5.6 8.2h1.5M5.6 11h1.5" />
   </Icon>
 );
 

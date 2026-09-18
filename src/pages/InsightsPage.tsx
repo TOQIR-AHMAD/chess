@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSettings } from '@/hooks/useSettings';
-import { usePageTitle } from '@/hooks/useShell';
+import { LargeTitle, usePageTitle } from '@/hooks/useShell';
 import { useInsights, type InsightQuery } from '@/hooks/useInsights';
 import { DEFAULT_QUERY, InsightsForm, PERIODS } from '@/components/insights/InsightsForm';
 import { InsightGameList } from '@/components/insights/InsightGameList';
@@ -54,8 +54,10 @@ export function InsightsPage() {
   const period = PERIODS.find((entry) => entry.days === query?.days)?.label.toLowerCase();
 
   return (
-    <div className="w-full space-y-4">
-      <Panel title="Find your strengths and weaknesses">
+    <div className="@container mx-auto w-full max-w-[1200px] space-y-6 pt-1">
+      <LargeTitle>Strengths &amp; Weaknesses</LargeTitle>
+
+      <Panel>
         <InsightsForm
           initial={initial}
           running={insights.running}
@@ -76,9 +78,9 @@ export function InsightsPage() {
 
       {phase === 'collecting' && (
         <Panel>
-          <div className="flex items-center gap-2 py-2">
-            <Spinner size={16} className="text-accent" />
-            <span className="text-secondary text-sm">{insights.message}</span>
+          <div className="flex items-center gap-2.5 py-1">
+            <Spinner size={18} className="text-muted" />
+            <span className="text-secondary text-[15px]">{insights.message}</span>
           </div>
         </Panel>
       )}
@@ -93,8 +95,9 @@ export function InsightsPage() {
       )}
 
       {query && games.length > 0 && (
-        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
-          <div className="min-w-0">
+        <div className="grid items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_360px] @6xl:grid-cols-[minmax(0,1fr)_400px]">
+          {/* The report's own layouts follow the width of this column. */}
+          <div className="@container min-w-0">
             {report ? (
               <InsightsReport
                 report={report}
@@ -108,26 +111,26 @@ export function InsightsPage() {
 
           <Panel
             flush
-            className="xl:sticky xl:top-[calc(var(--navbar-height)+1rem)]"
+            className="@4xl:sticky @4xl:top-[calc(var(--navbar-height)+1rem)]"
             title={
               <div className="min-w-0">
                 <h2 className="panel-title">Games</h2>
-                <p className="text-muted text-[11px]">
+                <p className="text-muted text-[13px] tabular-nums">
                   {query.username} · {period} · {insights.completed} of {analysable} reviewed
                 </p>
               </div>
             }
             actions={
               phase === 'cancelled' && pending > 0 ? (
-                <button type="button" className="btn btn-subtle h-8 px-2.5 text-xs" onClick={() => insights.run(query)}>
+                <button type="button" className="btn btn-subtle h-8 px-3 text-[13px]" onClick={() => insights.run(query)}>
                   Resume
                 </button>
               ) : undefined
             }
           >
             {insights.running && (
-              <div className="space-y-1.5 px-4 py-3">
-                <p className="text-secondary text-xs">{insights.message}</p>
+              <div className="space-y-2 border-b px-4 py-3">
+                <p className="text-secondary text-[13px]">{insights.message}</p>
                 <ProgressBar value={analysable > 0 ? (insights.completed / analysable) * 100 : 0} />
               </div>
             )}
@@ -151,12 +154,12 @@ function ReportPlaceholder({ cancelled }: { cancelled: boolean }) {
         />
       ) : (
         <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 @4xl:grid-cols-4">
             {[0, 1, 2, 3].map((key) => (
-              <Skeleton key={key} className="h-[8.5rem]" />
+              <Skeleton key={key} className="h-[8.5rem] rounded-[var(--radius-widget)]" />
             ))}
           </div>
-          <Skeleton className="h-48" />
+          <Skeleton className="h-48 rounded-[var(--radius-card)]" />
         </div>
       )}
     </Panel>

@@ -9,7 +9,7 @@ import { opponentOf } from '@/services/gameService';
 import { ChessBoard } from '@/components/chess/ChessBoard';
 import { ClassificationIcon } from '@/components/chess/ClassificationIcon';
 import { ProgressBar, Spinner } from '@/components/ui/Feedback';
-import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, SkipEnd, SkipStart } from '@/components/ui/Icons';
+import { ChevronLeft, ChevronRight, SkipEnd, SkipStart } from '@/components/ui/Icons';
 import { formatEval } from '@/utils/evaluation';
 import { formatDate } from '@/utils/format';
 import { analysisPath } from '@/utils/routes';
@@ -70,7 +70,7 @@ function GameRow({
       >
         <span
           className={cn(
-            'chip w-7 justify-center',
+            'flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold',
             result === 'win' ? 'chip-win' : result === 'loss' ? 'chip-loss' : 'chip-draw',
           )}
           title={result ? `${result[0].toUpperCase()}${result.slice(1)}` : 'Result unknown'}
@@ -82,7 +82,7 @@ function GameRow({
           <span className="flex items-center gap-1.5">
             <span
               className={cn(
-                'h-2.5 w-2.5 shrink-0 rounded-[3px] border',
+                'h-2.5 w-2.5 shrink-0 rounded-full border',
                 color === 'white' ? 'bg-eval-white' : 'bg-eval-black',
               )}
               title={`You played ${color}`}
@@ -100,7 +100,11 @@ function GameRow({
 
         <span className="flex items-center gap-2">
           <Status entry={entry} accuracy={side?.accuracy ?? null} blunders={side?.counts.blunder ?? 0} />
-          {expanded ? <ChevronDown size={15} className="text-muted" /> : <ChevronRight size={15} className="text-muted" />}
+          <ChevronRight
+            size={15}
+            strokeWidth={2.2}
+            className={cn('text-tertiary transition-transform duration-200', expanded && 'rotate-90')}
+          />
         </span>
       </button>
 
@@ -108,7 +112,7 @@ function GameRow({
         (parsed ? (
           <GameViewer entry={entry} parsed={parsed} username={username} />
         ) : (
-          <p className="text-muted px-4 pb-3 text-xs">{entry.error ?? 'No moves to show.'}</p>
+          <p className="text-muted px-4 pb-3 text-[13px]">{entry.error ?? 'No moves to show.'}</p>
         ))}
     </div>
   );
@@ -125,24 +129,24 @@ function Status({
 }) {
   switch (entry.status) {
     case 'queued':
-      return <span className="text-muted text-xs">Queued</span>;
+      return <span className="text-muted text-[13px]">Queued</span>;
     case 'analysing':
       return (
         <span className="flex w-24 items-center gap-1.5">
-          <Spinner size={12} className="text-accent shrink-0" />
+          <Spinner size={13} className="text-muted" />
           <ProgressBar value={entry.percent} />
         </span>
       );
     case 'failed':
       return (
-        <span className="text-danger text-xs" title={entry.error ?? undefined}>
+        <span className="text-danger text-[13px]" title={entry.error ?? undefined}>
           Failed
         </span>
       );
     default:
       return (
-        <span className="text-right text-xs leading-tight">
-          <span className="block font-mono font-semibold tabular-nums">
+        <span className="text-right text-[12px] leading-tight">
+          <span className="block text-[15px] font-semibold tabular-nums">
             {accuracy !== null ? `${accuracy.toFixed(1)}%` : '—'}
           </span>
           <span className={cn('block', blunders > 0 ? 'cls-blunder' : 'text-muted')}>
@@ -175,7 +179,7 @@ function GameViewer({ entry, parsed, username }: { entry: InsightGameEntry; pars
         Pinned to the top of the scrolling games list while this game is open, so
         the board stays in sight while the moves below it are scrolled and clicked.
       */}
-      <div className="sticky top-0 z-10 -mx-4 space-y-1.5 border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 pt-1 pb-2">
+      <div className="sticky top-0 z-10 -mx-4 space-y-1.5 border-b bg-[var(--surface-panel)] px-4 pt-1 pb-2">
         <div className="mx-auto w-full max-w-[300px]">
           <ChessBoard
             fen={parsed.positions[index]}
@@ -190,27 +194,27 @@ function GameViewer({ entry, parsed, username }: { entry: InsightGameEntry; pars
 
         <div className="mx-auto grid w-full max-w-[300px] grid-cols-4 gap-1">
           <StepButton label="First move" onClick={() => go(0)} disabled={index === 0}>
-            <SkipStart size={15} />
+            <SkipStart size={16} />
           </StepButton>
           <StepButton label="Previous move" onClick={() => go(index - 1)} disabled={index === 0}>
-            <ChevronLeft size={15} />
+            <ChevronLeft size={20} strokeWidth={2.3} />
           </StepButton>
           <StepButton label="Next move" onClick={() => go(index + 1)} disabled={index === last}>
-            <ChevronRight size={15} />
+            <ChevronRight size={20} strokeWidth={2.3} />
           </StepButton>
           <StepButton label="Last move" onClick={() => go(last)} disabled={index === last}>
-            <SkipEnd size={15} />
+            <SkipEnd size={16} />
           </StepButton>
         </div>
       </div>
 
-      <div className="surface-sunken min-h-[3.25rem] px-3 py-2 text-xs">
+      <div className="min-h-[3.25rem] rounded-xl bg-[var(--fill-4)] px-3 py-2 text-[13px]">
         {!move ? (
           <p className="text-muted">Starting position — step forward, or click a move below.</p>
         ) : (
           <>
             <p className="flex flex-wrap items-center gap-1.5">
-              <span className="font-mono font-semibold">
+              <span className="font-semibold tabular-nums">
                 {move.moveNumber}
                 {move.color === 'white' ? '.' : '…'} {move.san}
               </span>
@@ -218,7 +222,7 @@ function GameViewer({ entry, parsed, username }: { entry: InsightGameEntry; pars
                 <>
                   <ClassificationIcon classification={analysis.classification} size={14} />
                   <span className={cn('font-semibold', meta.color)}>{meta.label}</span>
-                  <span className="text-muted ml-auto font-mono tabular-nums">
+                  <span className="text-muted ml-auto tabular-nums">
                     {formatEval(analysis.evalBefore)} → {formatEval(analysis.evalAfter)}
                   </span>
                 </>
@@ -237,9 +241,9 @@ function GameViewer({ entry, parsed, username }: { entry: InsightGameEntry; pars
 
       <MoveText entry={entry} parsed={parsed} current={index} onSelect={go} />
 
-      <Link to={analysisPath(username, summary, index)} className="btn btn-subtle h-8 px-2.5 text-xs">
-        <ExternalIcon size={13} />
+      <Link to={analysisPath(username, summary, index)} className="btn btn-subtle h-8 px-3.5 text-[13px]">
         Open in full review
+        <ChevronRight size={14} strokeWidth={2.4} />
       </Link>
     </div>
   );
@@ -259,7 +263,7 @@ function StepButton({
   return (
     <button
       type="button"
-      className="btn btn-ghost h-8 px-0"
+      className="toolbar-btn h-9"
       onClick={onClick}
       disabled={disabled}
       title={label}
@@ -288,7 +292,7 @@ function MoveText({
   // No scroll box of its own: the games list is the one thing that scrolls, with
   // the board pinned above these moves.
   return (
-    <p className="surface-sunken px-3 py-2 font-mono text-xs leading-6">
+    <p className="rounded-xl bg-[var(--fill-4)] px-3 py-2 text-[13px] leading-7 tabular-nums">
       {parsed.moves.map((move, index) => {
         const analysis = review?.moves[index];
         const notable =
@@ -305,8 +309,8 @@ function MoveText({
               onClick={() => onSelect(move.ply + 1)}
               aria-current={active ? 'true' : undefined}
               className={cn(
-                'mr-2 inline-flex items-center gap-0.5 px-0.5',
-                active ? 'bg-brand-500 text-white' : 'hover:bg-[var(--surface-hover)]',
+                'mr-1.5 inline-flex items-center gap-0.5 rounded-md px-1',
+                active ? 'bg-brand-500 font-semibold text-white' : 'hover:bg-[var(--fill-3)]',
                 !active && (meta ? `${meta.color} font-semibold` : 'text-secondary'),
               )}
               title={meta ? `${meta.label} — show this position` : 'Show this position'}

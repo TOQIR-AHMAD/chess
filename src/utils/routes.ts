@@ -20,3 +20,5 @@ export function analysisPath(username: string, game: Pick<GameSummary, 'id' | 'a
 }
 
 export const INSIGHTS_PATH = '/insights';
+
+export const SETTINGS_PATH = '/settings';

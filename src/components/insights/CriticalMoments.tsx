@@ -6,7 +6,7 @@ import { opponentOf } from '@/services/gameService';
 import { PHASE_LABELS, type CriticalMoment } from '@/services/insights';
 import { ChessBoard } from '@/components/chess/ChessBoard';
 import { ClassificationIcon } from '@/components/chess/ClassificationIcon';
-import { ExternalIcon } from '@/components/ui/Icons';
+import { ChevronRight } from '@/components/ui/Icons';
 import { formatSanLine } from '@/utils/chess';
 import { formatDate } from '@/utils/format';
 import { formatEval } from '@/utils/evaluation';
@@ -29,7 +29,7 @@ export function CriticalMoments({
   theme: BoardTheme;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
       {moments.map((moment) => (
         <MomentCard key={`${moment.gameId}-${moment.ply}`} moment={moment} username={username} theme={theme} />
       ))}
@@ -47,7 +47,7 @@ function MomentCard({ moment, username, theme }: { moment: CriticalMoment; usern
   const line = moment.bestLine.length > 1 ? formatSanLine(moment.fenBefore, moment.bestLine, 6) : '';
 
   return (
-    <article className="surface-raised flex flex-col border border-[var(--border-subtle)]">
+    <article className="flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-[var(--fill-4)]">
       <div className="p-3 pb-0">
         <ChessBoard
           fen={moment.fenBefore}
@@ -60,9 +60,9 @@ function MomentCard({ moment, username, theme }: { moment: CriticalMoment; usern
         />
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 p-3 text-xs">
+      <div className="flex flex-1 flex-col gap-2 p-3 text-[13px]">
         <p className="flex items-center gap-1.5">
-          <ClassificationIcon classification={moment.classification} size={16} />
+          <ClassificationIcon classification={moment.classification} size={17} />
           <span className={cn('font-semibold', meta.color)}>{meta.label}</span>
           <span className="text-muted">
             · move {moment.moveNumber} · {PHASE_LABELS[moment.phase]}
@@ -70,18 +70,22 @@ function MomentCard({ moment, username, theme }: { moment: CriticalMoment; usern
         </p>
 
         <p className="text-secondary">
-          You played <span className="font-mono font-semibold">{number} {moment.san}</span>, taking the evaluation
-          from <span className="font-mono">{formatEval(moment.evalBefore)}</span> to{' '}
-          <span className="font-mono">{formatEval(moment.evalAfter)}</span>.
+          You played <span className="font-semibold tabular-nums">{number} {moment.san}</span>, taking the
+          evaluation from <span className="tabular-nums">{formatEval(moment.evalBefore)}</span> to{' '}
+          <span className="tabular-nums">{formatEval(moment.evalAfter)}</span>.
         </p>
 
         {revealed ? (
           <p className="text-secondary">
-            Better was <span className="text-accent font-mono font-semibold">{moment.bestMoveSan ?? '—'}</span>
-            {line && <span className="text-muted font-mono"> ({line})</span>}
+            Better was <span className="text-accent font-semibold tabular-nums">{moment.bestMoveSan ?? '—'}</span>
+            {line && <span className="text-muted tabular-nums"> ({line})</span>}
           </p>
         ) : (
-          <button type="button" className="btn btn-subtle h-8 self-start px-2.5 text-xs" onClick={() => setRevealed(true)}>
+          <button
+            type="button"
+            className="btn btn-subtle min-h-8 self-start px-3 py-1.5 text-left text-[13px] whitespace-normal"
+            onClick={() => setRevealed(true)}
+          >
             Find the better move — then show it
           </button>
         )}
@@ -90,9 +94,12 @@ function MomentCard({ moment, username, theme }: { moment: CriticalMoment; usern
           <span className="truncate">
             vs {opponent?.username ?? 'Unknown'} · {formatDate(moment.summary.endTime)}
           </span>
-          <Link to={analysisPath(username, moment.summary, moment.ply)} className="hover-accent inline-flex shrink-0 items-center gap-1 font-semibold">
-            <ExternalIcon size={12} />
+          <Link
+            to={analysisPath(username, moment.summary, moment.ply)}
+            className="text-accent inline-flex shrink-0 items-center gap-0.5 font-semibold"
+          >
             Review
+            <ChevronRight size={14} strokeWidth={2.4} />
           </Link>
         </div>
       </div>

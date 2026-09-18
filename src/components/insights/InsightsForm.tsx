@@ -37,7 +37,8 @@ export const DEFAULT_QUERY: Omit<InsightQuery, 'username'> = {
 
 /**
  * Search bar for the insights pass — whose games, from when, how many and how
- * deep — laid out as one row of labelled fields, like the game-history filters.
+ * deep — laid out as one row of captioned fields, like the game-history filters,
+ * and stacking into a form on a phone.
  */
 export function InsightsForm({
   initial,
@@ -71,27 +72,28 @@ export function InsightsForm({
   return (
     <form
       onSubmit={submit}
-      className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))_auto]"
+      className="grid items-start gap-3 @xl:grid-cols-2 @3xl:grid-cols-3 @7xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))_auto]"
     >
       <Field label="Chess.com username" htmlFor="insights-username">
         <div className="relative">
           <SearchIcon
-            size={15}
-            className="text-muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
+            size={16}
+            className="text-muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
           />
           <input
             id="insights-username"
-            className="input pl-8"
+            className="input pl-9"
             placeholder="e.g. hikaru"
             value={draft.username}
             onChange={(event) => set('username', event.target.value)}
             autoComplete="off"
+            autoCapitalize="off"
             spellCheck={false}
             aria-invalid={touched && !valid}
           />
         </div>
         {touched && !valid && (
-          <p className="text-danger mt-1 text-xs">Enter a valid Chess.com username.</p>
+          <p className="text-danger mt-1.5 px-1 text-[13px]">Enter a valid Chess.com username.</p>
         )}
       </Field>
 
@@ -157,16 +159,16 @@ export function InsightsForm({
 
       {/* The label-sized spacer keeps the button level with the fields beside it. */}
       <div>
-        <span className="field-label invisible hidden sm:block" aria-hidden="true">
+        <span className="field-label invisible hidden @xl:block" aria-hidden="true">
           &nbsp;
         </span>
         {running ? (
-          <button type="button" className="btn btn-danger min-h-[2.2rem] w-full" onClick={onCancel}>
-            <StopIcon size={15} />
+          <button type="button" className="btn btn-danger min-h-[2.25rem] w-full" onClick={onCancel}>
+            <StopIcon size={14} fill="currentColor" />
             Stop
           </button>
         ) : (
-          <button type="submit" className="btn btn-primary min-h-[2.2rem] w-full">
+          <button type="submit" className="btn btn-primary min-h-[2.25rem] w-full">
             <TargetIcon size={16} />
             Analyse games
           </button>

@@ -28,10 +28,10 @@ export function InsightsReport({
   boardTheme: BoardTheme;
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <SummaryTiles report={report} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-6 @4xl:grid-cols-2">
         <InsightPanel
           title="What to work on"
           subtitle="Most important first"
@@ -45,7 +45,7 @@ export function InsightsReport({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-6 @4xl:grid-cols-2">
         <PhasePanel report={report} />
         <HabitsPanel report={report} />
       </div>
@@ -58,7 +58,7 @@ export function InsightsReport({
 
       <OpeningsPanel report={report} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-6 @4xl:grid-cols-2">
         <ColorsPanel report={report} />
         <PiecesPanel report={report} />
       </div>
@@ -73,31 +73,31 @@ export function InsightsReport({
 function SummaryTiles({ report }: { report: InsightReport }) {
   const { record, perGame } = report;
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 @4xl:grid-cols-4">
       <Tile
         tone="stat-primary"
-        icon={<ListIcon size={44} className="stat-card-glyph" />}
+        icon={<ListIcon className="stat-card-glyph" />}
         value={String(report.games)}
         label="Games analysed"
         sub={`${record.wins}W · ${record.draws}D · ${record.losses}L · ${record.score}% score`}
       />
       <Tile
         tone="stat-info"
-        icon={<ChartIcon size={44} className="stat-card-glyph" />}
+        icon={<ChartIcon className="stat-card-glyph" />}
         value={`${report.accuracy.toFixed(1)}%`}
         label="Average accuracy"
         sub={`${(report.averageCentipawnLoss / 100).toFixed(2)} pawns lost per move`}
       />
       <Tile
         tone="stat-warning"
-        icon={<AlertIcon size={44} className="stat-card-glyph" />}
+        icon={<AlertIcon className="stat-card-glyph" />}
         value={perGame.blunders.toFixed(1)}
         label="Blunders per game"
         sub={`${perGame.mistakes.toFixed(1)} mistakes · ${perGame.missed.toFixed(1)} misses per game`}
       />
       <Tile
         tone="stat-success"
-        icon={<CrownIcon size={44} className="stat-card-glyph" />}
+        icon={<CrownIcon className="stat-card-glyph" />}
         value={`${report.topMoveShare}%`}
         label="Best or excellent moves"
         sub={`Over ${report.moves} moves out of the opening book`}
@@ -109,9 +109,11 @@ function SummaryTiles({ report }: { report: InsightReport }) {
 function Tile({ tone, icon, value, label, sub }: { tone: string; icon: ReactNode; value: string; label: string; sub: string }) {
   return (
     <div className={cn('stat-card', tone)}>
-      {icon}
+      <div className="stat-card-top">
+        <p className="stat-card-label">{label}</p>
+        {icon}
+      </div>
       <p className="stat-card-value">{value}</p>
-      <p className="stat-card-label">{label}</p>
       <p className="stat-card-sub">{sub}</p>
     </div>
   );
@@ -136,14 +138,14 @@ function InsightPanel({
       title={
         <div>
           <h2 className="panel-title">{title}</h2>
-          {subtitle && <p className="text-muted text-[11px]">{subtitle}</p>}
+          {subtitle && <p className="text-muted text-[13px]">{subtitle}</p>}
         </div>
       }
     >
       {insights.length === 0 ? (
-        <p className="text-muted px-4 py-6 text-sm">{empty}</p>
+        <p className="text-muted px-4 py-6 text-[15px]">{empty}</p>
       ) : (
-        <ol>
+        <ol className="list-inset [--cell-inset:3.75rem]">
           {insights.map((insight, index) => (
             <InsightItem key={insight.id} insight={insight} rank={index + 1} />
           ))}
@@ -156,21 +158,24 @@ function InsightPanel({
 function InsightItem({ insight, rank }: { insight: Insight; rank: number }) {
   const weakness = insight.tone === 'weakness';
   return (
-    <li className="flex gap-3 border-t border-[var(--border-subtle)] px-4 py-3 first:border-t-0">
+    <li className="flex gap-3 px-4 py-3">
       <span
-        className={cn('flex h-8 w-8 shrink-0 items-center justify-center', weakness ? 'chip-loss' : 'chip-win')}
+        className={cn(
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+          weakness ? 'chip-loss' : 'chip-win',
+        )}
         aria-label={weakness ? `Weakness ${rank}` : 'Strength'}
       >
-        {weakness ? <AlertIcon size={16} /> : <CheckIcon size={16} />}
+        {weakness ? <AlertIcon size={16} strokeWidth={2} /> : <CheckIcon size={16} strokeWidth={2.4} />}
       </span>
-      <div className="min-w-0 space-y-1">
+      <div className="min-w-0 space-y-1.5">
         <h3 className="list-row-title">
-          {weakness && rank <= 3 && <span className="text-muted mr-1.5 text-[11px] font-bold">#{rank}</span>}
+          {weakness && rank <= 3 && <span className="text-muted mr-1.5 text-[12px] font-semibold">#{rank}</span>}
           {insight.title}
         </h3>
-        <p className="text-secondary text-xs leading-relaxed">{insight.evidence}</p>
+        <p className="text-secondary text-[14px] leading-relaxed">{insight.evidence}</p>
         {insight.advice && (
-          <p className="surface-sunken text-secondary px-3 py-2 text-xs leading-relaxed">
+          <p className="bg-accent-soft text-secondary rounded-xl px-3 py-2 text-[14px] leading-relaxed">
             <span className="text-accent font-semibold">How to improve: </span>
             {insight.advice}
           </p>
@@ -191,7 +196,7 @@ function PhasePanel({ report }: { report: InsightReport }) {
       title={
         <div>
           <h2 className="panel-title">By phase of the game</h2>
-          <p className="text-muted text-[11px]">Opening: first 10 moves or book · Endgame: six or fewer pieces left</p>
+          <p className="text-muted text-[13px]">Opening: first 10 moves or book · Endgame: six or fewer pieces left</p>
         </div>
       }
     >
@@ -199,17 +204,17 @@ function PhasePanel({ report }: { report: InsightReport }) {
         {report.phases.map((phase) => (
           <div key={phase.phase} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="flex items-center gap-2 text-sm font-semibold">
+              <span className="flex items-center gap-2 text-[15px] font-semibold">
                 {PHASE_LABELS[phase.phase]}
                 {weakest === phase.phase && <span className="chip chip-loss">Weakest</span>}
                 {strongest === phase.phase && <span className="chip chip-win">Strongest</span>}
               </span>
-              <span className="font-mono text-sm font-semibold tabular-nums">
+              <span className="text-[15px] font-semibold tabular-nums">
                 {phase.moves > 0 ? `${phase.accuracy.toFixed(1)}%` : '—'}
               </span>
             </div>
             <ProgressBar value={phase.moves > 0 ? phase.accuracy : 0} />
-            <p className="text-muted text-xs">
+            <p className="text-muted text-[13px]">
               {phase.moves === 0
                 ? 'No moves in this phase yet.'
                 : `${phase.errorsPer10} errors per 10 moves · ${phase.blunders} ${
@@ -306,26 +311,23 @@ function HabitsPanel({ report }: { report: InsightReport }) {
 
   return (
     <Panel title="Habits" flush>
-      <ul>
+      <ul className="list-inset">
         {rows.map((row) => (
-          <li
-            key={row.label}
-            className="grid grid-cols-[1fr_auto] items-center gap-3 border-t border-[var(--border-subtle)] px-4 py-2.5 first:border-t-0"
-          >
+          <li key={row.label} className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-2.5">
             <div className="min-w-0">
-              <p className="text-sm font-semibold">{row.label}</p>
-              <p className="text-muted text-xs">
+              <p className="text-[15px] font-semibold">{row.label}</p>
+              <p className="text-muted text-[13px] leading-snug">
                 {row.hint} · {row.better} is better
               </p>
             </div>
             <div className="text-right">
-              <p className="font-mono text-sm font-semibold tabular-nums">
+              <p className="text-[15px] font-semibold tabular-nums">
                 {row.whole > 0 ? `${Math.round((row.part / row.whole) * 100)}%` : '—'}
               </p>
-              <p className="text-muted text-[11px] tabular-nums">
+              <p className="text-muted text-[12px] tabular-nums">
                 {row.whole > 0 ? `${row.part} of ${row.whole}` : 'no cases yet'}
               </p>
-              {row.extra && row.whole > 0 && <p className="text-muted text-[11px]">{row.extra}</p>}
+              {row.extra && row.whole > 0 && <p className="text-muted text-[12px]">{row.extra}</p>}
             </div>
           </li>
         ))}
@@ -341,7 +343,7 @@ function OpeningsPanel({ report }: { report: InsightReport }) {
   return (
     <Panel title="Openings" flush>
       {openings.length === 0 ? (
-        <p className="text-muted px-4 py-6 text-sm">No openings recognised yet.</p>
+        <p className="text-muted px-4 py-6 text-[15px]">No openings recognised yet.</p>
       ) : (
         <div className="min-w-0 overflow-x-auto">
           <table className="w-full text-left">
@@ -358,24 +360,24 @@ function OpeningsPanel({ report }: { report: InsightReport }) {
               {openings.map((opening) => (
                 <tr key={`${opening.color}-${opening.name}`} className="tbl-row">
                   <td className="px-4 py-2">
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-2">
                       <span
                         className={cn(
-                          'h-2.5 w-2.5 shrink-0 rounded-[3px] border',
+                          'h-2.5 w-2.5 shrink-0 rounded-full border',
                           opening.color === 'white' ? 'bg-eval-white' : 'bg-eval-black',
                         )}
                         title={`As ${opening.color}`}
                       />
-                      <span className="text-sm font-medium whitespace-nowrap">{opening.name}</span>
+                      <span className="text-[14px] font-medium whitespace-nowrap">{opening.name}</span>
                     </span>
                   </td>
                   <td className="px-2 py-2 text-center tabular-nums">{opening.games}</td>
-                  <td className="px-2 py-2 text-center text-xs tabular-nums">
+                  <td className="px-2 py-2 text-center text-[13px] tabular-nums">
                     <span className="text-win">{opening.wins}</span> / <span className="text-draw">{opening.draws}</span> /{' '}
                     <span className="text-loss">{opening.losses}</span>
                   </td>
-                  <td className="px-2 py-2 text-right font-mono tabular-nums">{opening.score}%</td>
-                  <td className="px-4 py-2 text-right font-mono tabular-nums">{opening.accuracy.toFixed(1)}%</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{opening.score}%</td>
+                  <td className="px-4 py-2 text-right font-semibold tabular-nums">{opening.accuracy.toFixed(1)}%</td>
                 </tr>
               ))}
             </tbody>
@@ -389,31 +391,28 @@ function OpeningsPanel({ report }: { report: InsightReport }) {
 function ColorsPanel({ report }: { report: InsightReport }) {
   return (
     <Panel title="White and Black" flush>
-      <ul>
+      <ul className="list-inset">
         {report.colors.map((entry) => (
-          <li
-            key={entry.color}
-            className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-t border-[var(--border-subtle)] px-4 py-2.5 first:border-t-0"
-          >
-            <span className="flex items-center gap-2">
+          <li key={entry.color} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-4 py-2.5">
+            <span className="flex flex-wrap items-center gap-x-2">
               <span
                 className={cn(
-                  'h-3 w-3 shrink-0 rounded-[3px] border',
+                  'h-3 w-3 shrink-0 rounded-full border',
                   entry.color === 'white' ? 'bg-eval-white' : 'bg-eval-black',
                 )}
               />
-              <span className="text-sm font-semibold capitalize">{entry.color}</span>
-              <span className="text-muted text-xs">
+              <span className="text-[15px] font-semibold capitalize">{entry.color}</span>
+              <span className="text-muted text-[13px]">
                 {entry.games} {entry.games === 1 ? 'game' : 'games'} · {entry.wins}W {entry.draws}D {entry.losses}L
               </span>
             </span>
             <span className="text-right">
-              <span className="block font-mono text-sm font-semibold tabular-nums">{entry.score}%</span>
-              <span className="text-muted block text-[11px]">score</span>
+              <span className="block text-[15px] font-semibold tabular-nums">{entry.score}%</span>
+              <span className="text-muted block text-[12px]">score</span>
             </span>
             <span className="text-right">
-              <span className="block font-mono text-sm font-semibold tabular-nums">{entry.accuracy.toFixed(1)}%</span>
-              <span className="text-muted block text-[11px]">accuracy</span>
+              <span className="block text-[15px] font-semibold tabular-nums">{entry.accuracy.toFixed(1)}%</span>
+              <span className="text-muted block text-[12px]">accuracy</span>
             </span>
           </li>
         ))}
@@ -430,23 +429,23 @@ function PiecesPanel({ report }: { report: InsightReport }) {
       title={
         <div>
           <h2 className="panel-title">Errors by piece moved</h2>
-          <p className="text-muted text-[11px]">Share of your moves with each piece that were errors · {overall}% overall</p>
+          <p className="text-muted text-[13px]">Share of your moves with each piece that were errors · {overall}% overall</p>
         </div>
       }
     >
-      <ul className="grid grid-cols-3 sm:grid-cols-6">
+      <ul className="grid grid-cols-3 @md:grid-cols-6">
         {report.pieces.map((piece) => (
           <li key={piece.piece} className="px-3 py-3 text-center">
-            <p className="text-muted text-[11px] font-semibold capitalize">{piece.label}</p>
+            <p className="text-muted text-[12px] font-medium capitalize">{piece.label}</p>
             <p
               className={cn(
-                'font-mono text-sm font-semibold tabular-nums',
+                'text-[20px] font-bold tabular-nums',
                 piece.errors >= 4 && piece.errorRate >= overall * 1.75 && 'text-loss',
               )}
             >
               {piece.errorRate}%
             </p>
-            <p className="text-muted text-[11px] tabular-nums">
+            <p className="text-muted text-[12px] tabular-nums">
               {piece.errors}/{piece.moves}
             </p>
           </li>
@@ -475,26 +474,26 @@ function TrendPanel({ points, username, average }: { points: TrendPoint[]; usern
       title={
         <div>
           <h2 className="panel-title">Accuracy by game</h2>
-          <p className="text-muted text-[11px]">Oldest to newest · click a bar to open that game</p>
+          <p className="text-muted text-[13px]">Oldest to newest · click a bar to open that game</p>
         </div>
       }
       actions={
-        <div className="text-muted flex items-center gap-3 text-[11px]">
+        <div className="text-muted flex items-center gap-3 text-[12px]">
           {(['win', 'draw', 'loss'] as const).map((result) => (
-            <span key={result} className="flex items-center gap-1 capitalize">
-              <span className="h-2.5 w-2.5" style={{ background: RESULT_FILL[result] }} />
+            <span key={result} className="flex items-center gap-1.5 capitalize">
+              <span className="h-2 w-2 rounded-full" style={{ background: RESULT_FILL[result] }} />
               {result}
             </span>
           ))}
         </div>
       }
     >
-      <div className="relative flex h-36 items-end gap-[2px] border-b border-[var(--border-strong)]">
+      <div className="relative flex h-36 items-end gap-[3px] border-b border-[var(--border-strong)]">
         <div
-          className="pointer-events-none absolute inset-x-0 border-t border-dashed border-[var(--border-strong)]"
+          className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-[var(--border-strong)]"
           style={{ bottom: `${average}%` }}
         >
-          <span className="text-muted surface-raised absolute -top-2.5 right-0 px-1 text-[10px] tabular-nums">
+          <span className="text-muted absolute -top-2.5 right-0 rounded-full bg-[var(--surface-panel)] px-1.5 text-[11px] font-medium tabular-nums shadow-[0_0_0_1px_var(--border-subtle)]">
             avg {average.toFixed(1)}%
           </span>
         </div>
@@ -510,7 +509,7 @@ function TrendPanel({ points, username, average }: { points: TrendPoint[]; usern
               aria-label={`${formatDate(point.summary.endTime)}, ${result} against ${opponent?.username ?? 'unknown'}, ${point.accuracy.toFixed(1)} percent accuracy`}
             >
               <span
-                className="w-full transition-opacity group-hover:opacity-80"
+                className="w-full rounded-t-[3px] transition-opacity group-hover:opacity-75"
                 style={{ height: `${Math.max(2, point.accuracy)}%`, background: RESULT_FILL[result] }}
               />
             </Link>

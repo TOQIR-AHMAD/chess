@@ -22,16 +22,8 @@ import { EnginePanel } from '@/components/chess/EnginePanel';
 import { GameInfo } from '@/components/chess/GameInfo';
 import { GameReviewPanel } from '@/components/chess/GameReviewPanel';
 import { EngineSettings } from '@/components/chess/EngineSettings';
-import { Panel } from '@/components/ui/Panel';
 import { ErrorState, ProgressBar, RetryButton, Skeleton, Spinner } from '@/components/ui/Feedback';
-import {
-  SettingsIcon,
-  StopIcon,
-  CpuIcon,
-  CrownIcon,
-  InfoIcon,
-  ListIcon,
-} from '@/components/ui/Icons';
+import { SettingsIcon, CpuIcon, CrownIcon, InfoIcon, ListIcon } from '@/components/ui/Icons';
 import { detectOpening } from '@/services/openings';
 import { PgnError } from '@/services/pgnParser';
 import { toWhitePov } from '@/utils/evaluation';
@@ -165,6 +157,10 @@ export function GameAnalysisPage() {
    * has to take the smaller of the room left across and the room left down.
    */
   const [stageRef, stage] = useElementSize<HTMLDivElement>();
+  // The playback controls sit in the stage, directly under the board and exactly
+  // as wide, so they move with it; the board leaves room for them — measured,
+  // not assumed.
+  const [controlsRef, controlsBox] = useElementSize<HTMLDivElement>();
   const fitViewport = useIsDesktop();
 
   const boardSize = useMemo(() => {
@@ -172,9 +168,9 @@ export function GameAnalysisPage() {
     const byWidth = stage.width - EVAL_COLUMN_WIDTH;
     // Stacked layout: the page scrolls, so only the width constrains the board.
     if (!fitViewport) return Math.max(MIN_BOARD_SIZE, byWidth);
-    const byHeight = stage.height - 2 * STRIP_HEIGHT;
+    const byHeight = stage.height - 2 * STRIP_HEIGHT - controlsBox.height;
     return Math.max(MIN_BOARD_SIZE, Math.min(byWidth, byHeight));
-  }, [fitViewport, stage.height, stage.width]);
+  }, [controlsBox.height, fitViewport, stage.height, stage.width]);
 
   // Leaving the position resets any side line, and the walk through it.
   useEffect(() => {
@@ -187,8 +183,12 @@ export function GameAnalysisPage() {
 
   const live = useStockfish(displayFen, settings.engine, true);
 
-  // The navbar names the page; the tab title carries the two players as well.
-  usePageTitle(game ? `${game.white.username} vs ${game.black.username}` : 'Game Analysis');
+  // The bar names the page and offers the way back to the player's games; the
+  // tab title carries the two players as well.
+  usePageTitle(game ? `${game.white.username} vs ${game.black.username}` : 'Game Analysis', {
+    to: playerPath(username),
+    label: username,
+  });
 
   useEffect(() => {
     document.title = game ? `${game.white.username} vs ${game.black.username} — Gambit Review` : 'Analysis — Gambit Review';
@@ -452,6 +452,8 @@ export function GameAnalysisPage() {
 
   const analysing = analysis.running;
   const progress = analysis.progress;
+  // Whether the per-move card above the tabs has anything to show (it renders nothing otherwise).
+  const feedbackShown = (!exploring && currentMoveAnalysis !== null) || analysing;
 
   return (
     /*
@@ -460,7 +462,7 @@ export function GameAnalysisPage() {
       scrolls the window, the move list and the rail scroll inside themselves.
     */
     <div className="page-flush page-fit flex w-full flex-col lg:h-full lg:min-h-0">
-      {/* Engine and board settings live in the navbar, beside the shell's own buttons. */}
+      {/* Engine and board settings live in the bar, beside the shell's own buttons. */}
       <NavbarActions>
         <button
           type="button"
@@ -471,38 +473,35 @@ export function GameAnalysisPage() {
           aria-label="Engine and board settings"
           aria-expanded={showSettings}
         >
-          <SettingsIcon size={18} />
+          <SettingsIcon size={19} />
         </button>
       </NavbarActions>
 
-      {/* Analysis progress. */}
+      {/* Analysis progress, as an inline banner above the workspace. */}
       {(analysing || progress.phase === 'error') && (
-        <div className="panel mb-2 flex shrink-0 flex-wrap items-center gap-3 px-4 py-2">
-          {analysing ? <Spinner size={14} className="text-accent" /> : <CpuIcon size={15} className="text-danger" />}
+        <div className="panel mb-2 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 py-2 pr-2 pl-4">
+          {analysing ? <Spinner size={16} className="text-muted" /> : <CpuIcon size={16} className="text-danger" />}
           {/*
             Once the quick pass has landed, the rail is already full of labels and
             accuracy. Say so, or the running bar reads as "nothing is ready yet".
           */}
           {analysis.preliminary && analysing && (
-            <span className="border-brand-500/40 text-accent shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-              Quick review ready
-            </span>
+            <span className="chip bg-accent-soft text-accent shrink-0">Quick review ready</span>
           )}
-          <span className="text-sm">
+          <span className="text-[14px]">
             {progress.phase === 'error' ? (progress.error ?? 'Analysis failed') : progress.message || 'Preparing…'}
           </span>
           {analysing && (
             <>
-              <ProgressBar value={progress.percent} className="max-w-64 flex-1" />
-              <span className="text-muted font-mono text-xs tabular-nums">{progress.percent}%</span>
-              <button type="button" className="btn btn-ghost h-7 px-2 text-xs" onClick={analysis.cancel}>
-                <StopIcon size={12} />
+              <ProgressBar value={progress.percent} className="max-w-64 min-w-16 flex-1" />
+              <span className="text-muted text-[13px] tabular-nums">{progress.percent}%</span>
+              <button type="button" className="btn btn-ghost h-8 px-3 text-[14px]" onClick={analysis.cancel}>
                 Stop
               </button>
             </>
           )}
           {progress.phase === 'error' && (
-            <button type="button" className="btn btn-subtle h-7 px-2 text-xs" onClick={analysis.start}>
+            <button type="button" className="btn btn-subtle h-8 px-3 text-[13px]" onClick={analysis.start}>
               Try again
             </button>
           )}
@@ -510,12 +509,12 @@ export function GameAnalysisPage() {
       )}
 
       {!analysing && !analysis.review && progress.phase !== 'error' && (
-        <div className="panel mb-2 flex shrink-0 flex-wrap items-center gap-3 px-4 py-2">
-          <CpuIcon size={15} className="text-accent" />
-          <span className="text-secondary text-sm">
-            This game has not been reviewed yet.
+        <div className="panel mb-2 flex shrink-0 flex-wrap items-center gap-3 py-2 pr-2 pl-3">
+          <span className="cell-icon h-7 w-7 rounded-[7px] bg-[linear-gradient(180deg,#47a6ff_0%,#0a6cff_100%)]">
+            <CpuIcon size={15} />
           </span>
-          <button type="button" className="btn btn-primary ml-auto h-7 px-3 text-xs" onClick={analysis.start}>
+          <span className="text-secondary text-[14px]">This game has not been reviewed yet.</span>
+          <button type="button" className="btn btn-primary ml-auto h-8 px-4 text-[14px]" onClick={analysis.start}>
             Analyse game
           </button>
         </div>
@@ -524,7 +523,7 @@ export function GameAnalysisPage() {
       {/*
         On mobile the two columns collapse with `display: contents`, so every panel
         becomes a direct flex item and `order-*` can interleave them into the
-        reading order a phone wants: board, controls, evaluation, moves, analysis.
+        reading order a phone wants: board and controls, then the analysis rail.
         From `lg` up the wrappers become real columns again and order is ignored.
       */}
       {/*
@@ -536,10 +535,10 @@ export function GameAnalysisPage() {
         {/* ---------------- Board column ---------------- */}
         <div className="contents lg:flex lg:min-h-0 lg:w-full lg:min-w-0 lg:flex-col lg:gap-2">
           {/*
-            The stage is the room the board is allowed to take. It gets whatever
-            the column has left once the controls are laid out, and the square is
-            measured from it — the smaller of its width and its height — so the
-            bottom name plate can never fall off the screen.
+            The stage is the room the board is allowed to take — the whole column.
+            The square is measured from it, the smaller of its width and of its
+            height less the name plates and the controls, so neither the bottom
+            name plate nor the controls can ever fall off the screen.
           */}
           <div
             ref={stageRef}
@@ -590,6 +589,28 @@ export function GameAnalysisPage() {
                   className={EVAL_COLUMN_OFFSET}
                 />
               )}
+
+              {/* A flex column, so the panel's margin is inside what is measured. */}
+              <div ref={controlsRef} className="flex flex-col">
+                <div className="panel mt-2 p-1.5">
+                  <GameControls
+                    nav={nav}
+                    totalMoves={parsed.moves.length}
+                    action={
+                      exploring ? (
+                        <button
+                          type="button"
+                          className="btn btn-subtle h-8 min-h-0 self-center px-3 text-[13px] whitespace-nowrap"
+                          onClick={exitExploration}
+                          title="Leave this line and return to the game"
+                        >
+                          Back to game
+                        </button>
+                      ) : null
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -601,47 +622,29 @@ export function GameAnalysisPage() {
             carries the state and the way back instead, where it costs no layout.
           */}
 
-          <Panel flush className="order-3 shrink-0">
-            <div className="px-2 py-1.5">
-              <GameControls
-                nav={nav}
-                totalMoves={parsed.moves.length}
-                action={
-                  exploring ? (
-                    <button
-                      type="button"
-                      className="btn btn-subtle h-8 min-h-0 gap-1.5 self-center px-2.5 text-xs whitespace-nowrap"
-                      onClick={exitExploration}
-                      title="Leave this line and return to the game"
-                    >
-                      Back to game
-                    </button>
-                  ) : null
-                }
-              />
-            </div>
-          </Panel>
         </div>
 
         {/*
-          Side rail. One panel with a tab bar rather than five stacked cards: on a
-          desktop screen the whole workspace now fits without scrolling, and the
-          move list keeps its own scroll instead of the page growing under it.
+          Side rail. One card with a segmented control rather than five stacked
+          cards: on a desktop screen the whole workspace fits without scrolling, and
+          the move list keeps its own scroll instead of the page growing under it.
         */}
         <div className="panel order-4 flex min-h-0 flex-col lg:order-none lg:h-full">
           {showSettings ? (
             <>
+              {/* Settings open over the rail like a sheet: title centred, Done to the right. */}
               <div className="panel-header shrink-0">
+                <span />
                 <h2 className="panel-title">Settings</h2>
                 <button
                   type="button"
-                  className="btn btn-ghost h-7 px-2 text-xs"
+                  className="btn btn-ghost h-8 justify-self-end px-3 text-[15px] font-semibold"
                   onClick={() => setShowSettings(false)}
                 >
                   Done
                 </button>
               </div>
-              <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
+              <div className="scroll-thin min-h-0 flex-1 overflow-y-auto bg-[var(--surface-app)] px-3 pt-4 pb-6">
                 <EngineSettings onConfigChange={analysis.reset} />
               </div>
             </>
@@ -653,10 +656,10 @@ export function GameAnalysisPage() {
                 sequence never means hunting for them in the engine tab.
               */}
               {(mate || stepper || exploring) && (
-                <div className="border-brand-500/40 bg-brand-500/5 shrink-0 border-b px-3 py-2">
+                <div className="bg-accent-soft mx-3 mt-3 shrink-0 rounded-xl px-3 py-2.5">
                   <div className="flex items-center gap-2">
-                    <CrownIcon size={14} className="text-accent shrink-0" />
-                    <span className="truncate text-sm font-semibold">
+                    <CrownIcon size={15} className="text-accent shrink-0" />
+                    <span className="truncate text-[14px] font-semibold">
                       {live.terminal === 'checkmate'
                         ? 'Checkmate'
                         : mate
@@ -666,21 +669,21 @@ export function GameAnalysisPage() {
                             : 'Exploring a variation'}
                     </span>
                     {stepper ? (
-                      <span className="text-muted ml-auto shrink-0 font-mono text-[11px] tabular-nums">
+                      <span className="text-muted ml-auto shrink-0 text-[12px] tabular-nums">
                         {stepsTaken}/{stepper.line.length}
                       </span>
                     ) : exploring ? (
-                      <span className="text-muted ml-auto shrink-0 font-mono text-[11px] tabular-nums">
+                      <span className="text-muted ml-auto shrink-0 text-[12px] tabular-nums">
                         +{exploration.length}
                       </span>
                     ) : null}
                   </div>
 
                   {stepper ? (
-                    <div className="mt-2 flex items-center gap-1">
+                    <div className="mt-2 flex items-center gap-1.5">
                       <button
                         type="button"
-                        className="btn btn-subtle h-7 flex-1 px-2 text-xs"
+                        className="btn btn-gray h-8 flex-1 px-2 text-[13px]"
                         onClick={stepBack}
                         disabled={stepsTaken <= 1}
                       >
@@ -688,7 +691,7 @@ export function GameAnalysisPage() {
                       </button>
                       <button
                         type="button"
-                        className="btn btn-primary h-7 flex-1 px-2 text-xs"
+                        className="btn btn-primary h-8 flex-1 px-2 text-[13px]"
                         onClick={stepForward}
                         disabled={stepsLeft <= 0}
                       >
@@ -696,18 +699,18 @@ export function GameAnalysisPage() {
                       </button>
                       <button
                         type="button"
-                        className="btn btn-ghost h-7 shrink-0 px-2 text-xs"
+                        className="btn btn-ghost h-8 shrink-0 px-3 text-[13px]"
                         onClick={exitExploration}
                       >
                         Exit
                       </button>
                     </div>
                   ) : (
-                    <div className="mt-2 flex items-center gap-1">
+                    <div className="mt-2 flex items-center gap-1.5">
                       {mate && (
                         <button
                           type="button"
-                          className="btn btn-primary h-7 flex-1 px-2 text-xs"
+                          className="btn btn-primary h-8 flex-1 px-3 text-[13px]"
                           onClick={() => stepEngineLine(mate.line)}
                         >
                           Step through the mate
@@ -716,7 +719,7 @@ export function GameAnalysisPage() {
                       {exploring && (
                         <button
                           type="button"
-                          className={cn('btn btn-subtle h-7 px-2 text-xs', !mate && 'flex-1')}
+                          className={cn('btn btn-gray h-8 px-3 text-[13px]', !mate && 'flex-1')}
                           onClick={exitExploration}
                         >
                           Back to the game
@@ -732,7 +735,7 @@ export function GameAnalysisPage() {
                 it is capped at a share of the rail so a long comment cannot push
                 the tabs and the move list off the bottom.
               */}
-              <div className="scroll-thin shrink-0 lg:max-h-[38%] lg:overflow-y-auto">
+              <div className="scroll-thin shrink-0 lg:max-h-[55%] lg:overflow-y-auto">
                 <AnalysisPanel
                   move={exploring ? null : currentMoveAnalysis}
                   fenBefore={nav.index > 0 ? parsed.positions[nav.index - 1] : null}
@@ -740,27 +743,21 @@ export function GameAnalysisPage() {
                 />
               </div>
 
-              <div className="panel-header shrink-0 justify-center">
-                <h2 className="panel-title flex items-center gap-2 normal-case">
-                  <CpuIcon size={17} className="text-brand-500" />
-                  Analysis
-                </h2>
-              </div>
-
-              <div role="tablist" aria-label="Analysis panels" className="flex shrink-0">
-                {RAIL_TABS.map((entry) => (
-                  <button
-                    key={entry.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === entry.key}
-                    className="tab tab-stacked"
-                    onClick={() => setTab(entry.key)}
-                  >
-                    <entry.icon size={17} aria-hidden="true" />
-                    {entry.label}
-                  </button>
-                ))}
+              <div className={cn('shrink-0 px-3 py-2.5', feedbackShown && 'border-t')}>
+                <div role="tablist" aria-label="Analysis panels" className="segmented">
+                  {RAIL_TABS.map((entry) => (
+                    <button
+                      key={entry.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === entry.key}
+                      onClick={() => setTab(entry.key)}
+                    >
+                      <entry.icon size={14} aria-hidden="true" className="hidden shrink-0 sm:block" />
+                      {entry.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="scroll-thin min-h-0 flex-1 overflow-y-auto" role="tabpanel">
@@ -794,7 +791,7 @@ export function GameAnalysisPage() {
                       }}
                     />
                   ) : (
-                    <p className="text-muted px-4 py-8 text-center text-sm">
+                    <p className="text-muted px-4 py-8 text-center text-[14px]">
                       {analysing
                         ? 'The first pass takes a few seconds; the review appears as soon as it lands.'
                         : 'This game has not been reviewed yet.'}
@@ -826,25 +823,24 @@ function AnalysisSkeleton({ scanned }: { scanned: number }) {
        the game arrives and the real layout takes over. */
     <div className="page-flush page-fit w-full lg:h-full lg:min-h-0 lg:overflow-hidden">
       <div className="mb-3 flex items-center gap-2">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="ml-auto h-8 w-40" />
+        <Skeleton className="h-11 w-full rounded-[var(--radius-card)]" />
       </div>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-3">
-          <div className="flex justify-center gap-3">
-            <Skeleton className="h-[min(60vh,700px)] w-7" />
-            <Skeleton className="aspect-square w-full max-w-[min(60vh,700px)]" />
+          <div className="flex justify-center gap-2">
+            <Skeleton className="h-[min(60vh,700px)] w-[42px] rounded-none" />
+            <Skeleton className="aspect-square w-full max-w-[min(60vh,700px)] rounded-none" />
           </div>
-          <Skeleton className="h-14" />
-          <Skeleton className="h-36" />
+          <Skeleton className="h-12 rounded-[var(--radius-card)]" />
         </div>
         <div className="space-y-3">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-64" />
+          <Skeleton className="h-40 rounded-[var(--radius-card)]" />
+          <Skeleton className="h-9 rounded-[0.5625rem]" />
+          <Skeleton className="h-72 rounded-[var(--radius-card)]" />
         </div>
       </div>
-      <p className="text-muted mt-4 text-center text-xs">
+      <p className="text-muted mt-4 flex items-center justify-center gap-2 text-center text-[13px]">
+        <Spinner size={14} />
         {scanned > 1 ? `Searching monthly archives (${scanned} checked)…` : 'Loading the game…'}
       </p>
     </div>

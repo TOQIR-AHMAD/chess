@@ -38,9 +38,9 @@ export function GameReviewPanel({
         so the panel says which review this is rather than quietly changing later.
       */}
       {review.preliminary && (
-        <p className="border-brand-500/40 bg-brand-500/5 text-secondary rounded-md border px-2.5 py-1.5 text-[11px] leading-snug">
-          <span className="text-accent font-semibold">Quick review.</span> Still refining at full
-          depth — accuracy and a few labels may change.
+        <p className="bg-accent-soft text-secondary rounded-xl px-3 py-2 text-[13px] leading-snug">
+          <span className="text-accent font-semibold">Quick review.</span> Still refining at full depth —
+          accuracy and a few labels may change.
         </p>
       )}
 
@@ -50,15 +50,12 @@ export function GameReviewPanel({
         <PlayerHeading name={whiteName} side="white" />
         <PlayerHeading name={blackName} side="black" />
 
-        <span className="text-muted text-[11px] font-semibold tracking-wide uppercase">Accuracy</span>
+        <span className="text-muted text-[13px]">Accuracy</span>
         <AccuracyBox value={review.white.accuracy} />
         <AccuracyBox value={review.black.accuracy} />
       </div>
 
-      <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-2 gap-y-1 pt-3">
-        <span />
-        <span />
-        <span />
+      <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-2 gap-y-0.5 border-t pt-3">
         {rows.map((key) => (
           <QualityRow
             key={key}
@@ -75,25 +72,22 @@ export function GameReviewPanel({
             }
           />
         ))}
-        {rows.length === 0 && (
-          <span className="text-muted col-span-3 py-2 text-xs">No moves classified.</span>
-        )}
+        {rows.length === 0 && <span className="text-muted col-span-3 py-2 text-[13px]">No moves classified.</span>}
       </div>
 
-      <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-2 gap-y-1 pt-3">
-        <span className="text-muted text-[11px] font-semibold tracking-wide uppercase">Avg loss</span>
+      <div className="grid grid-cols-[auto_1fr_1fr] items-center gap-x-2 border-t pt-3">
+        <span className="text-muted text-[13px]">Avg loss</span>
         <LossBox centipawns={review.white.averageCentipawnLoss} />
         <LossBox centipawns={review.black.averageCentipawnLoss} />
       </div>
 
       {review.opening && (
-        <div className="surface-sunken rounded-md px-3 py-2">
-          <p className="text-muted text-[10px] font-semibold tracking-wide uppercase">Opening</p>
-          <p className="text-sm font-medium">{review.opening.name}</p>
-          {review.opening.eco && <p className="text-muted text-xs">ECO {review.opening.eco}</p>}
+        <div className="rounded-xl bg-[var(--fill-4)] px-3 py-2">
+          <p className="text-muted text-[12px]">Opening</p>
+          <p className="text-[15px] font-semibold">{review.opening.name}</p>
+          {review.opening.eco && <p className="text-muted text-[13px]">ECO {review.opening.eco}</p>}
         </div>
       )}
-
     </div>
   );
 }
@@ -102,12 +96,9 @@ function PlayerHeading({ name, side }: { name: string; side: 'white' | 'black' }
   return (
     <div className="flex min-w-0 items-center justify-center gap-1.5">
       <span
-        className={cn(
-          'h-2.5 w-2.5 shrink-0 rounded-[3px] border',
-          side === 'white' ? 'bg-eval-white' : 'bg-eval-black',
-        )}
+        className={cn('h-2.5 w-2.5 shrink-0 rounded-full border', side === 'white' ? 'bg-eval-white' : 'bg-eval-black')}
       />
-      <span className="truncate text-xs font-semibold" title={name}>
+      <span className="truncate text-[13px] font-semibold" title={name}>
         {name}
       </span>
     </div>
@@ -118,7 +109,7 @@ function AccuracyBox({ value }: { value: number }) {
   return (
     <div
       className={cn(
-        'rounded-md py-1.5 text-center font-mono text-lg font-bold tabular-nums',
+        'rounded-xl py-1.5 text-center text-[22px] font-bold tabular-nums',
         accuracyTone(value),
       )}
     >
@@ -129,7 +120,7 @@ function AccuracyBox({ value }: { value: number }) {
 
 function LossBox({ centipawns }: { centipawns: number }) {
   return (
-    <div className="surface-sunken text-secondary rounded-md py-1 text-center font-mono text-xs tabular-nums">
+    <div className="text-secondary rounded-lg bg-[var(--fill-4)] py-1 text-center text-[13px] tabular-nums">
       {(centipawns / 100).toFixed(2)}
     </div>
   );
@@ -149,12 +140,7 @@ function QualityRow({
   const meta = CLASSIFICATION_META[classification];
 
   const Cell = ({ count }: { count: number }) => (
-    <span
-      className={cn(
-        'text-center font-mono text-sm font-semibold tabular-nums',
-        count === 0 ? 'text-muted' : meta.color,
-      )}
-    >
+    <span className={cn('text-center text-[15px] font-semibold tabular-nums', count === 0 ? 'text-tertiary' : meta.color)}>
       {count}
     </span>
   );
@@ -165,14 +151,14 @@ function QualityRow({
       onClick={onSelect}
       disabled={!onSelect}
       className={cn(
-        'col-span-3 grid grid-cols-subgrid items-center rounded px-1 py-1 text-left transition-colors',
-        onSelect ? 'hover:bg-[var(--surface-hover)]' : 'cursor-default',
+        'col-span-3 grid grid-cols-subgrid items-center rounded-lg px-1.5 py-1 text-left transition-colors',
+        onSelect ? 'hover:bg-[var(--fill-4)]' : 'cursor-default',
       )}
       title={onSelect ? `Jump to the first ${meta.label.toLowerCase()}` : undefined}
     >
       <span className="flex items-center gap-2">
-        <ClassificationIcon classification={classification} size={18} />
-        <span className={cn('text-xs font-medium', meta.color)}>{meta.label}</span>
+        <ClassificationIcon classification={classification} size={20} />
+        <span className={cn('text-[13px] font-semibold', meta.color)}>{meta.label}</span>
       </span>
       <Cell count={white} />
       <Cell count={black} />

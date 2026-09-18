@@ -6,10 +6,10 @@ import { cn } from '@/utils/cn';
 /**
  * Playback controls under the board. Mirrors the keyboard shortcuts exactly.
  *
- * One row of six equal columns — first, back, forward, last, play, flip — all cut
- * from the same outlined face, with the ply counter hugging the right edge in a
- * seventh column of its own width. One row, because every pixel it takes is a
- * pixel off the board above it.
+ * A media-player toolbar: tinted glyphs on nothing, in one row of six equal
+ * columns — first, back, forward, last, play, flip — with the ply counter hugging
+ * the right edge in a seventh column of its own width. One row, because every
+ * pixel it takes is a pixel off the board above it.
  */
 export function GameControls({
   nav,
@@ -22,12 +22,12 @@ export function GameControls({
   action?: ReactNode;
   className?: string;
 }) {
-  const step = 'btn btn-subtle h-8 min-h-0 min-w-0 p-0';
+  const step = 'toolbar-btn';
 
   return (
     <div
       className={cn(
-        'grid items-stretch gap-1.5',
+        'grid items-center gap-1',
         action
           ? 'grid-cols-[repeat(6,minmax(0,1fr))_auto_auto]'
           : 'grid-cols-[repeat(6,minmax(0,1fr))_auto]',
@@ -45,7 +45,7 @@ export function GameControls({
         title="First move (Home)"
         aria-label="Go to first move"
       >
-        <SkipStart size={17} />
+        <SkipStart size={18} />
       </button>
       <button
         type="button"
@@ -58,7 +58,7 @@ export function GameControls({
         title="Previous move (←)"
         aria-label="Previous move"
       >
-        <ChevronLeft size={19} />
+        <ChevronLeft size={22} strokeWidth={2.3} />
       </button>
       <button
         type="button"
@@ -71,7 +71,7 @@ export function GameControls({
         title="Next move (→)"
         aria-label="Next move"
       >
-        <ChevronRight size={19} />
+        <ChevronRight size={22} strokeWidth={2.3} />
       </button>
       <button
         type="button"
@@ -84,33 +84,27 @@ export function GameControls({
         title="Last move (End)"
         aria-label="Go to last move"
       >
-        <SkipEnd size={17} />
+        <SkipEnd size={18} />
       </button>
 
       <button
         type="button"
-        className={cn(step, 'gap-1.5 text-xs')}
+        className={step}
         onClick={nav.togglePlay}
         disabled={totalMoves === 0}
         title={nav.playing ? 'Pause (Space)' : 'Play (Space)'}
         aria-label={nav.playing ? 'Pause playback' : 'Start playback'}
       >
-        {nav.playing ? <PauseIcon size={15} /> : <PlayIcon size={15} />}
+        {nav.playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
         {nav.playing ? 'Pause' : 'Play'}
       </button>
 
-      <button
-        type="button"
-        className={cn(step, 'gap-1.5 text-xs')}
-        onClick={nav.flip}
-        title="Flip board (F)"
-        aria-label="Flip board"
-      >
-        <FlipIcon size={15} />
+      <button type="button" className={step} onClick={nav.flip} title="Flip board (F)" aria-label="Flip board">
+        <FlipIcon size={16} />
         Flip
       </button>
 
-      <span className="text-muted self-center pl-1 text-xs whitespace-nowrap tabular-nums">
+      <span className="text-muted self-center pr-1 pl-1.5 text-[13px] whitespace-nowrap tabular-nums">
         {nav.index} / {totalMoves}
       </span>
 

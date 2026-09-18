@@ -1,84 +1,146 @@
-import { useState } from 'react';
+import { useState, type ComponentType } from 'react';
 import type { PlayerSummary, RatingCard } from '@/types/player';
+import { useElementSize } from '@/hooks/useElementSize';
+import { useLargeTitle } from '@/hooks/useShell';
 import { Skeleton } from '@/components/ui/Feedback';
-import { CrownIcon, ExternalIcon } from '@/components/ui/Icons';
+import {
+  CalendarIcon,
+  ChartIcon,
+  ClockIcon,
+  CrownIcon,
+  ExternalIcon,
+  GlobeIcon,
+  MapPinIcon,
+  UsersIcon,
+} from '@/components/ui/Icons';
 import { formatDate, formatNumber, formatRelative } from '@/utils/format';
 import { totalRecord } from '@/services/playerService';
 import { cn } from '@/utils/cn';
 
-/** Profile header: identity, ratings and account facts, all from the public API. */
+/** Narrowest a fact's box may get before the boxes take another row. */
+const MIN_FACT_WIDTH = 130;
+/** The gap between boxes, in pixels — `gap-3`. */
+const FACT_GAP = 12;
+
+interface Fact {
+  label: string;
+  value: string;
+  icon: ComponentType<{ size?: number; className?: string }>;
+  /** A `tone-*` class from index.css: each kind of fact keeps its own colour. */
+  tone: string;
+}
+
+/**
+ * Profile header: identity, ratings and account facts, all from the public API.
+ *
+ * The card is in two parts: on the left, the player as a contact card shows them
+ * — the picture, the name and the link to Chess.com, centred — and on the right
+ * the facts, each in a box tinted with a system colour of its own. Where the card
+ * is too narrow for both, the player sits above the facts.
+ */
 export function PlayerProfile({ player }: { player: PlayerSummary }) {
   const record = totalRecord(player);
+  // The name is this page's large title; the bar takes it once it scrolls away.
+  const titleRef = useLargeTitle<HTMLHeadingElement>();
+  const [factsRef, factsBox] = useElementSize<HTMLDListElement>();
+
+  const facts: Fact[] = [];
+  if (player.countryName) facts.push({ label: 'Country', value: player.countryName, icon: GlobeIcon, tone: 'tone-blue' });
+  if (player.location) facts.push({ label: 'Location', value: player.location, icon: MapPinIcon, tone: 'tone-orange' });
+  if (player.fide !== null) {
+    facts.push({ label: 'FIDE', value: formatNumber(player.fide), icon: CrownIcon, tone: 'tone-yellow' });
+  }
+  facts.push({ label: 'Joined', value: formatDate(player.joined), icon: CalendarIcon, tone: 'tone-indigo' });
+  facts.push({ label: 'Last online', value: formatRelative(player.lastOnline), icon: ClockIcon, tone: 'tone-green' });
+  if (player.followers !== null) {
+    facts.push({ label: 'Followers', value: formatNumber(player.followers), icon: UsersIcon, tone: 'tone-pink' });
+  }
+  if (record.total > 0) {
+    facts.push({
+      label: 'Record',
+      value: `${formatNumber(record.win)}W · ${formatNumber(record.loss)}L · ${formatNumber(record.draw)}D`,
+      icon: ChartIcon,
+      tone: 'tone-teal',
+    });
+  }
+
+  // Two even rows beside the picture — three and three rather than five and one —
+  // or more rows where the boxes would otherwise get too narrow. The last box
+  // stretches over whatever the last row leaves empty, so the grid always closes.
+  const fitColumns =
+    factsBox.width > 0 ? Math.max(1, Math.floor((factsBox.width + FACT_GAP) / (MIN_FACT_WIDTH + FACT_GAP))) : facts.length;
+  const preferredColumns = facts.length <= 3 ? facts.length : Math.ceil(facts.length / 2);
+  const rows = Math.ceil(facts.length / Math.max(1, Math.min(fitColumns, preferredColumns)));
+  const columns = Math.max(1, Math.ceil(facts.length / rows));
+  const remainder = facts.length % columns;
+  const lastSpan = remainder === 0 ? 1 : columns - remainder + 1;
 
   return (
     <>
-    <section className="panel overflow-hidden">
-      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:p-5">
-        <Avatar player={player} />
+      <section className="panel flex flex-col @2xl:flex-row">
+        <div className="flex min-w-0 shrink-0 flex-col items-center px-6 pt-6 pb-5 text-center @2xl:w-64 @2xl:justify-center @2xl:py-6">
+          <Avatar player={player} />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {player.title && (
-              <span className="chip chip-warning font-bold">
-                {player.title}
-              </span>
-            )}
-            <h1 className="truncate text-xl font-bold sm:text-2xl">{player.username}</h1>
-            {player.isStreamer && (
-              <span className="chip bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30">Streamer</span>
-            )}
+          <div className="mt-3 flex max-w-full min-w-0 flex-wrap items-center justify-center gap-2">
+            {player.title && <span className="chip chip-warning">{player.title}</span>}
+            <h1 ref={titleRef} className="truncate text-[28px] leading-tight font-bold tracking-[-0.02em]">
+              {player.username}
+            </h1>
+            {player.isStreamer && <span className="chip chip-purple">Streamer</span>}
           </div>
 
           {player.displayName !== player.username && (
-            <p className="text-secondary mt-0.5 truncate text-sm">{player.displayName}</p>
+            <p className="text-muted mt-0.5 max-w-full truncate text-[15px]">{player.displayName}</p>
           )}
-
-          <dl className="text-secondary mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-3 lg:grid-cols-4">
-            {player.countryName && <Fact label="Country" value={player.countryName} />}
-            {player.location && <Fact label="Location" value={player.location} />}
-            {player.fide !== null && <Fact label="FIDE" value={formatNumber(player.fide)} />}
-            <Fact label="Joined" value={formatDate(player.joined)} />
-            <Fact label="Last online" value={formatRelative(player.lastOnline)} />
-            {player.followers !== null && <Fact label="Followers" value={formatNumber(player.followers)} />}
-            {record.total > 0 && (
-              <Fact
-                label="Record"
-                value={`${formatNumber(record.win)}W · ${formatNumber(record.loss)}L · ${formatNumber(record.draw)}D`}
-              />
-            )}
-          </dl>
 
           {player.profileUrl && (
             <a
               href={player.profileUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="text-muted hover-accent mt-3 inline-flex items-center gap-1.5 text-xs transition-colors"
+              className="btn btn-subtle mt-3 h-8 px-3.5 text-[13px]"
             >
               <ExternalIcon size={13} />
               Chess.com profile
             </a>
           )}
         </div>
+
+        <div className="flex min-w-0 flex-1 items-center px-4 pb-4 @2xl:py-5 @2xl:pr-5 @2xl:pl-0">
+          <dl
+            ref={factsRef}
+            className="grid w-full gap-3"
+            style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+          >
+            {facts.map(({ label, value, icon: Icon, tone }, index) => (
+              <div
+                key={label}
+                className={cn('tone-box min-w-0 rounded-2xl px-4 py-3', tone)}
+                style={lastSpan > 1 && index === facts.length - 1 ? { gridColumn: `span ${lastSpan}` } : undefined}
+              >
+                <dt className="tone-ink flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.04em] uppercase">
+                  <Icon size={14} className="shrink-0" />
+                  <span className="truncate">{label}</span>
+                </dt>
+                <dd className="mt-1 text-[17px] leading-snug font-semibold text-balance tabular-nums">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* The ratings as a row of widgets, one system colour each — as many to a row as fit. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-3">
+        {player.ratings.map((card, index) => (
+          <RatingTile key={card.key} card={card} tone={STAT_TONES[index % STAT_TONES.length]} />
+        ))}
       </div>
-
-    </section>
-
-    {/*
-      * The dashboard's counter row: one solid block of colour per rating, the
-      * number carried at full contrast and everything else sitting back into it.
-      */}
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {player.ratings.map((card, index) => (
-        <RatingTile key={card.key} card={card} tone={STAT_TONES[index % STAT_TONES.length]} />
-      ))}
-    </div>
     </>
   );
 }
 
-/** The console's dashboard colours, cycled in its order. */
-const STAT_TONES = ['stat-primary', 'stat-warning', 'stat-info', 'stat-success', 'stat-muted'];
+/** The widget colours, cycled in order. */
+const STAT_TONES = ['stat-primary', 'stat-warning', 'stat-info', 'stat-success', 'stat-teal', 'stat-muted'];
 
 function Avatar({ player }: { player: PlayerSummary }) {
   const [failed, setFailed] = useState(false);
@@ -86,9 +148,9 @@ function Avatar({ player }: { player: PlayerSummary }) {
 
   if (!player.avatar || failed) {
     return (
-      <div className="from-brand-500 to-brand-700 flex h-16 w-16 shrink-0 items-center justify-center bg-gradient-to-br text-xl font-bold text-white sm:h-20 sm:w-20">
+      <span className="monogram mx-auto h-24 w-24 text-[34px]" aria-hidden="true">
         {initials}
-      </div>
+      </span>
     );
   }
 
@@ -96,24 +158,13 @@ function Avatar({ player }: { player: PlayerSummary }) {
     <img
       src={player.avatar}
       alt=""
-      width={80}
-      height={80}
+      width={96}
+      height={96}
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
-      className="surface-raised h-16 w-16 shrink-0 rounded-xl object-cover sm:h-20 sm:w-20"
+      className="surface-raised mx-auto h-24 w-24 rounded-full object-cover"
     />
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-muted text-[10px] font-semibold tracking-wide uppercase">{label}</dt>
-      <dd className="truncate" title={value}>
-        {value}
-      </dd>
-    </div>
   );
 }
 
@@ -122,19 +173,19 @@ function RatingTile({ card, tone }: { card: RatingCard; tone: string }) {
 
   return (
     <div className={cn('stat-card', tone)}>
-      <CrownIcon size={44} className="stat-card-glyph" />
-      <p className="stat-card-value">
-        {card.rating !== null ? formatNumber(card.rating) : '—'}
-      </p>
-      <p className="stat-card-label">{card.label}</p>
-      <p className="stat-card-sub flex items-center gap-1">
+      <div className="stat-card-top">
+        <p className="stat-card-label">{card.label}</p>
+        <CrownIcon className="stat-card-glyph" />
+      </div>
+      <p className="stat-card-value">{card.rating !== null ? formatNumber(card.rating) : '—'}</p>
+      <p className="stat-card-sub">
         {card.best !== null && card.key !== 'puzzles' && (
           <>
-            <CrownIcon size={11} />
-            {formatNumber(card.best)}
+            <CrownIcon size={11} className="mr-1 inline align-[-1px]" />
+            {formatNumber(card.best)}{' '}
           </>
         )}
-        {games !== null && games > 0 && <span>· {formatNumber(games)} games</span>}
+        {games !== null && games > 0 && <>· {formatNumber(games)} games</>}
       </p>
     </div>
   );
@@ -143,27 +194,27 @@ function RatingTile({ card, tone }: { card: RatingCard; tone: string }) {
 export function PlayerProfileSkeleton() {
   return (
     <>
-    <section className="panel overflow-hidden">
-      <div className="flex gap-4 p-5">
-        <Skeleton className="h-20 w-20 rounded-xl" />
-        <div className="flex-1 space-y-2.5">
-          <Skeleton className="h-6 w-44" />
-          <Skeleton className="h-3.5 w-32" />
-          <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-8" />
-            ))}
-          </div>
+      {/* The same two parts as the card it stands in for, so nothing jumps when it lands. */}
+      <section className="panel flex flex-col @2xl:flex-row">
+        <div className="flex shrink-0 flex-col items-center px-6 pt-6 pb-5 @2xl:w-64 @2xl:justify-center @2xl:py-6">
+          <Skeleton className="h-24 w-24 rounded-full" />
+          <Skeleton className="mt-4 h-7 w-40" />
+          <Skeleton className="mt-2 h-4 w-28" />
+          <Skeleton className="mt-3 h-8 w-36 rounded-full" />
         </div>
-      </div>
-    </section>
+        <div className="grid flex-1 grid-cols-2 content-center gap-3 px-4 pb-4 @xl:grid-cols-3 @2xl:py-5 @2xl:pr-5 @2xl:pl-0">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-[4.25rem] rounded-2xl" />
+          ))}
+        </div>
+      </section>
 
-    {/* Matches the counter row it stands in for, so the page does not jump. */}
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <Skeleton key={index} className="h-[104px] rounded-[var(--radius-panel)]" />
-      ))}
-    </div>
+      {/* Matches the widget row it stands in for, so the page does not jump. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-3">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Skeleton key={index} className="h-[8.5rem] rounded-[var(--radius-widget)]" />
+        ))}
+      </div>
     </>
   );
 }
