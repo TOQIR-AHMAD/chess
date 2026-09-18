@@ -228,32 +228,32 @@ export function ChessBoard({
           lightSquareStyle: { backgroundColor: 'var(--board-light)' },
           darkSquareNotationStyle: { color: 'var(--board-light)', fontSize: '10px', fontWeight: 600 },
           lightSquareNotationStyle: { color: 'var(--board-dark)', fontSize: '10px', fontWeight: 600 },
-          boardStyle: {
-            borderRadius: '3px',
-            overflow: 'hidden',
-            boxShadow: 'var(--shadow-panel)',
-          },
+
           dropSquareStyle: { boxShadow: 'inset 0 0 0 4px var(--board-highlight)' },
         }}
       />
 
+      {/* The promotion choice, as an iOS alert: a glass card over a dimmed board. */}
       {promotion && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/45 backdrop-blur-[2px]">
-          <div className="panel flex gap-1 p-2">
-            {PROMOTION_PIECES.map(({ piece, label, glyph }) => (
-              <button
-                key={piece}
-                type="button"
-                className="btn btn-ghost h-12 w-12 text-2xl leading-none"
-                title={`Promote to ${label}`}
-                onClick={() => tryMove(promotion.from, promotion.to, piece)}
-              >
-                {glyph[promotion.color]}
-              </button>
-            ))}
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/35">
+          <div className="glass w-[min(18rem,90%)] overflow-hidden rounded-[1.25rem] text-center" role="dialog" aria-label="Promote to">
+            <div className="grid grid-cols-4 gap-1 p-3">
+              {PROMOTION_PIECES.map(({ piece, label, glyph }) => (
+                <button
+                  key={piece}
+                  type="button"
+                  className="flex h-14 items-center justify-center rounded-xl bg-[var(--fill-4)] font-serif text-[34px] leading-none text-[var(--text-primary)] transition-colors hover:bg-[var(--fill-2)]"
+                  title={`Promote to ${label}`}
+                  aria-label={label}
+                  onClick={() => tryMove(promotion.from, promotion.to, piece)}
+                >
+                  {glyph[promotion.color]}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
-              className="btn btn-ghost h-12 px-3 text-xs"
+              className="text-accent w-full border-t py-2.5 text-[17px] font-semibold transition-colors hover:bg-[var(--fill-4)]"
               onClick={() => setPromotion(null)}
             >
               Cancel

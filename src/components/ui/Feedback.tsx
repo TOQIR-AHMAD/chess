@@ -6,10 +6,17 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={cn('skeleton', className)} aria-hidden="true" />;
 }
 
+/** The eight spokes of the iOS activity indicator, brightest at the leading edge. */
+const SPOKES = Array.from({ length: 8 }, (_, index) => index);
+
+/**
+ * The iOS activity indicator. The spokes fade from the leading one backwards, and
+ * the whole wheel steps round a spoke at a time rather than spinning smoothly.
+ */
 export function Spinner({ className, size = 16 }: { className?: string; size?: number }) {
   return (
     <svg
-      className={cn('animate-spin', className)}
+      className={cn('ios-spinner shrink-0', className)}
       width={size}
       height={size}
       viewBox="0 0 24 24"
@@ -17,8 +24,20 @@ export function Spinner({ className, size = 16 }: { className?: string; size?: n
       role="status"
       aria-label="Loading"
     >
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.2" strokeWidth="3" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      {SPOKES.map((index) => (
+        <line
+          key={index}
+          x1="12"
+          y1="2.5"
+          x2="12"
+          y2="7"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          opacity={0.2 + (0.8 * index) / 7}
+          transform={`rotate(${index * 45} 12 12)`}
+        />
+      ))}
     </svg>
   );
 }
@@ -30,34 +49,39 @@ interface StateProps {
   className?: string;
 }
 
-export function ErrorState({ title, description, action, className }: StateProps) {
+/** Laid out like iOS's ContentUnavailableView: a large glyph, a bold title, a gray line. */
+function UnavailableView({
+  icon,
+  title,
+  description,
+  action,
+  className,
+  role,
+}: StateProps & { icon: ReactNode; role?: 'alert' }) {
   return (
-    <div className={cn('flex flex-col items-center gap-3 px-6 py-12 text-center', className)} role="alert">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full chip-danger">
-        <AlertIcon size={20} />
-      </span>
+    <div className={cn('flex flex-col items-center gap-3 px-6 py-12 text-center', className)} role={role}>
+      {icon}
       <div className="space-y-1">
-        <p className="text-sm font-semibold">{title}</p>
-        {description && <p className="text-secondary mx-auto max-w-sm text-sm">{description}</p>}
+        <p className="text-[20px] leading-tight font-bold tracking-[-0.015em]">{title}</p>
+        {description && <p className="text-muted mx-auto max-w-sm text-[15px] leading-snug">{description}</p>}
       </div>
-      {action}
+      {action && <div className="mt-1">{action}</div>}
     </div>
   );
 }
 
-export function EmptyState({ title, description, action, className }: StateProps) {
+export function ErrorState(props: StateProps) {
   return (
-    <div className={cn('flex flex-col items-center gap-3 px-6 py-12 text-center', className)}>
-      <span className="text-muted surface-raised flex h-11 w-11 items-center justify-center rounded-full">
-        <InboxIcon size={20} />
-      </span>
-      <div className="space-y-1">
-        <p className="text-sm font-semibold">{title}</p>
-        {description && <p className="text-secondary mx-auto max-w-sm text-sm">{description}</p>}
-      </div>
-      {action}
-    </div>
+    <UnavailableView
+      {...props}
+      role="alert"
+      icon={<AlertIcon size={44} strokeWidth={1.5} className="text-danger" />}
+    />
   );
+}
+
+export function EmptyState(props: StateProps) {
+  return <UnavailableView {...props} icon={<InboxIcon size={44} strokeWidth={1.5} className="text-tertiary" />} />;
 }
 
 export function RetryButton({ onClick, label = 'Try again' }: { onClick: () => void; label?: string }) {
@@ -82,18 +106,14 @@ export function ProgressBar({
   const clamped = Math.max(0, Math.min(100, value));
   return (
     <div
-      className={cn('surface-sunken is-pill h-1.5 w-full overflow-hidden', className)}
+      className={cn('ios-progress', className)}
       role="progressbar"
       aria-valuenow={Math.round(clamped)}
       aria-valuemin={0}
       aria-valuemax={100}
     >
-      <div
-        className={cn(
-          'is-pill h-full transition-[width] duration-300 ease-out',
-          tone === 'brand' ? 'bg-brand-500' : 'surface-raised',
-        )}
-        style={{ width: `${clamped}%` }}
+      <span
+        style={{ width: `${clamped}%`, background: tone === 'neutral' ? 'var(--text-muted)' : undefined }}
       />
     </div>
   );

@@ -34,6 +34,8 @@ const PLAYBACK_INTERVAL_MS = 900;
 export function useGameNavigation(
   parsed: ParsedGame | null,
   initialOrientation: 'white' | 'black' = 'white',
+  /** Where a newly loaded game opens, e.g. a position linked to from elsewhere. */
+  initialIndex = 0,
 ): GameNavigation {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -44,9 +46,9 @@ export function useGameNavigation(
 
   // A new game resets the cursor.
   useEffect(() => {
-    setIndex(0);
+    setIndex(parsed ? Math.max(0, Math.min(parsed.moves.length, initialIndex)) : 0);
     setPlaying(false);
-  }, [parsed]);
+  }, [parsed, initialIndex]);
 
   useEffect(() => setOrientation(initialOrientation), [initialOrientation]);
 

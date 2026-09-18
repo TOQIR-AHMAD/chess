@@ -15,11 +15,11 @@ import { cn } from '@/utils/cn';
  */
 
 const PIECE_GLYPH: Record<string, string> = {
-  p: '\u265F',
-  n: '\u265E',
-  b: '\u265D',
-  r: '\u265C',
-  q: '\u265B',
+  p: '♟',
+  n: '♞',
+  b: '♝',
+  r: '♜',
+  q: '♛',
 };
 
 /** Captured pieces read best in descending value, pawns last. */
@@ -39,7 +39,7 @@ export interface PlayerStripProps {
   clockSeconds?: number | null;
   /** Highlights the strip while it is this player's turn. */
   toMove?: boolean;
-  result?: '1' | '0' | '\u00BD' | null;
+  result?: '1' | '0' | '½' | null;
   className?: string;
 }
 
@@ -59,31 +59,17 @@ export function PlayerStrip({
   const grouped = PIECE_ORDER.flatMap((piece) => captured.filter((entry) => entry === piece));
 
   return (
-    <div
-      className={cn(
-        'flex h-9 min-w-0 items-center gap-2 border bg-[var(--surface-panel)] px-2',
-        className,
-      )}
-    >
-      <Avatar name={name} avatar={avatar} side={side} />
+    <div className={cn('flex h-9 min-w-0 items-center gap-2 px-0.5', className)}>
+      <Avatar name={name} avatar={avatar} />
 
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1.5">
           {title && (
-            <span className="chip-warning shrink-0 rounded-sm px-1 text-[10px] leading-4 font-bold">
-              {title}
-            </span>
+            <span className="chip chip-warning shrink-0 px-1.5 py-0 text-[10px] leading-4 font-bold">{title}</span>
           )}
-          <span className="truncate text-sm leading-tight font-semibold">{name}</span>
-          {rating !== null && (
-            <span className="text-muted shrink-0 font-mono text-xs tabular-nums">({rating})</span>
-          )}
-          {toMove && (
-            <span
-              className="bg-brand-500 is-pill ml-0.5 h-1.5 w-1.5 shrink-0"
-              aria-label="to move"
-            />
-          )}
+          <span className="truncate text-[14px] leading-tight font-semibold">{name}</span>
+          {rating !== null && <span className="text-muted shrink-0 text-[13px] tabular-nums">{rating}</span>}
+          {toMove && <span className="bg-brand-500 ml-0.5 h-1.5 w-1.5 shrink-0 rounded-full" aria-label="to move" />}
         </div>
 
         {/*
@@ -97,7 +83,8 @@ export function PlayerStrip({
               <span
                 className={cn(
                   'font-serif text-[15px] leading-none tracking-[-0.18em]',
-                  side === 'white' ? 'text-eval-black' : 'text-eval-white',
+                  // White has taken black pieces, and black white ones.
+                  side === 'white' ? 'captured-black' : 'captured-white',
                 )}
                 aria-label={`captured: ${grouped.length} pieces`}
               >
@@ -105,25 +92,17 @@ export function PlayerStrip({
               </span>
             )}
             {advantage > 0 && (
-              <span className="text-muted ml-1 text-[11px] font-semibold tabular-nums">
-                +{advantage}
-              </span>
+              <span className="text-muted ml-1 text-[11px] font-semibold tabular-nums">+{advantage}</span>
             )}
           </div>
         )}
       </div>
 
       {result && (
-        // The playback buttons' own face — outlined white tile, slate rules — with
-        // only the figure itself carrying the win/draw/loss colour.
         <span
           className={cn(
-            'btn btn-subtle h-6 w-6 min-h-0 shrink-0 p-0 font-mono text-xs font-bold',
-            result === '1'
-              ? 'text-win'
-              : result === '\u00BD'
-                ? 'text-draw'
-                : 'text-loss',
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold',
+            result === '1' ? 'chip-win' : result === '½' ? 'chip-draw' : 'chip-loss',
           )}
         >
           {result}
@@ -131,10 +110,11 @@ export function PlayerStrip({
       )}
 
       {clockSeconds !== null && clockSeconds !== undefined && (
+        // The running side's clock is the inverted one, as on a chess app's clock face.
         <span
           className={cn(
-            'shrink-0 rounded px-2 py-1 font-mono text-sm font-semibold tabular-nums',
-            toMove ? 'bg-[var(--surface-hover)] text-[var(--text-primary)]' : 'surface-sunken text-muted',
+            'shrink-0 rounded-lg px-2 py-0.5 text-[15px] font-semibold tabular-nums transition-colors',
+            toMove ? 'bg-[var(--text-primary)] text-[var(--surface-panel)]' : 'text-muted bg-[var(--fill-3)]',
           )}
         >
           {formatDuration(clockSeconds)}
@@ -144,18 +124,12 @@ export function PlayerStrip({
   );
 }
 
-function Avatar({ name, avatar, side }: { name: string; avatar?: string | null; side: Color }) {
+function Avatar({ name, avatar }: { name: string; avatar?: string | null }) {
   const [failed, setFailed] = useState(false);
 
   if (!avatar || failed) {
     return (
-      <span
-        className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded text-[11px] font-bold',
-          side === 'white' ? 'bg-eval-white text-eval-black' : 'bg-eval-black text-eval-white',
-        )}
-        aria-hidden="true"
-      >
+      <span className="monogram h-7 w-7 text-[11px]" aria-hidden="true">
         {name.slice(0, 2).toUpperCase()}
       </span>
     );
@@ -165,12 +139,12 @@ function Avatar({ name, avatar, side }: { name: string; avatar?: string | null; 
     <img
       src={avatar}
       alt=""
-      width={32}
-      height={32}
+      width={28}
+      height={28}
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
-      className="surface-raised h-8 w-8 shrink-0 rounded object-cover"
+      className="surface-raised h-7 w-7 shrink-0 rounded-full object-cover"
     />
   );
 }

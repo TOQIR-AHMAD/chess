@@ -9,5 +9,5 @@
       ]
     }
   ],
-  "rewrites": [{ "source": "/((?!assets/|engine/|favicon.svg).*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/((?!assets/|engine/|favicon.svg|apple-touch-icon.png).*)", "destination": "/index.html" }]
 }

@@ -1,244 +1,261 @@
-import { useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { ENGINE_LIMITS, QUICK_PASS_BUDGET_MS } from '@/services/stockfish';
 import { useSettings, type BoardTheme } from '@/hooks/useSettings';
 import { parallelism } from '@/workers/stockfishWorker';
-import { ChevronDown } from '@/components/ui/Icons';
+import { FormSection, Switch } from '@/components/ui/Controls';
+import { CheckIcon } from '@/components/ui/Icons';
 import { cn } from '@/utils/cn';
 
+const BOARD_THEMES: Array<{ key: BoardTheme; label: string }> = [
+  { key: 'classic', label: 'Classic' },
+  { key: 'slate', label: 'Slate' },
+  { key: 'walnut', label: 'Walnut' },
+  { key: 'ocean', label: 'Ocean' },
+];
+
 /**
- * Engine and classification settings.
+ * Engine, classification and board settings, as an inset-grouped iOS form: a
+ * section per subject, a row per setting, the explanation under the row it
+ * explains, and the destructive reset on its own at the foot.
  *
  * Changing depth / MultiPV / move time invalidates the analysis cache key, so the
- * caller re-runs the pass; the copy says so rather than letting it look like a
- * silent no-op.
+ * caller re-runs the pass.
  */
 export function EngineSettings({ onConfigChange }: { onConfigChange?: () => void }) {
   const settings = useSettings();
-  const [open, setOpen] = useState<'engine' | 'thresholds' | 'board' | null>('engine');
-
-  const section = (key: 'engine' | 'thresholds' | 'board', label: string) => (
-    <button
-      type="button"
-      onClick={() => setOpen((current) => (current === key ? null : key))}
-      className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-[var(--surface-hover)]"
-      aria-expanded={open === key}
-    >
-      <span className="text-xs font-semibold">{label}</span>
-      <ChevronDown size={15} className={cn('text-muted transition-transform', open === key && 'rotate-180')} />
-    </button>
-  );
 
   return (
-    <div>
-      {section('engine', 'Engine')}
-      {open === 'engine' && (
-        <div className="space-y-3 px-4 py-3">
-          <Slider
-            label="Analysis depth"
-            hint="Depth used for the full-game pass. Higher is more accurate and slower."
-            value={settings.engine.depth}
-            min={ENGINE_LIMITS.depth.min}
-            max={ENGINE_LIMITS.depth.max}
-            onChange={(depth) => {
-              settings.updateEngine({ depth });
-              onConfigChange?.();
-            }}
-          />
-          <Slider
-            label="Live depth"
-            hint="Depth for the position you are looking at right now."
-            value={settings.engine.liveDepth}
-            min={ENGINE_LIMITS.liveDepth.min}
-            max={ENGINE_LIMITS.liveDepth.max}
-            onChange={(liveDepth) => settings.updateEngine({ liveDepth })}
-          />
-          <Slider
-            label="Parallel searches"
-            hint={`Positions reviewed at once. Up to ${parallelism()} on this device.`}
-            value={settings.engine.threads}
-            min={1}
-            max={parallelism()}
-            onChange={(threads) => settings.updateEngine({ threads })}
-          />
-          <Slider
-            label="Hash (MB)"
-            hint="Total transposition table, shared out across the parallel searches."
-            value={settings.engine.hash}
-            min={ENGINE_LIMITS.hash.min}
-            max={ENGINE_LIMITS.hash.max}
-            step={16}
-            onChange={(hash) => settings.updateEngine({ hash })}
-          />
-          <Slider
-            label="Time per move (ms)"
-            hint="0 means search to the target depth with no time cap."
-            value={settings.engine.moveTimeMs}
-            min={ENGINE_LIMITS.moveTimeMs.min}
-            max={ENGINE_LIMITS.moveTimeMs.max}
-            step={100}
-            onChange={(moveTimeMs) => {
-              settings.updateEngine({ moveTimeMs });
-              onConfigChange?.();
-            }}
-          />
-          <Slider
-            label="Lines (MultiPV)"
-            hint="Alternative lines to calculate. 2 or more enables sharper brilliant-move detection."
-            value={settings.engine.multiPv}
-            min={ENGINE_LIMITS.multiPv.min}
-            max={ENGINE_LIMITS.multiPv.max}
-            onChange={(multiPv) => {
-              settings.updateEngine({ multiPv });
-              onConfigChange?.();
-            }}
-          />
-          <Toggle
-            label="Quick first pass"
-            hint={`A complete review in about ${Math.round(QUICK_PASS_BUDGET_MS / 1000)}s, then refined at the depth above. Off: nothing appears until the full pass finishes.`}
-            checked={settings.engine.quickPass}
-            onChange={(quickPass) => settings.updateEngine({ quickPass })}
-          />
-          <Toggle
-            label="Analyse automatically"
-            checked={settings.autoAnalyse}
-            onChange={(autoAnalyse) => settings.update({ autoAnalyse })}
-          />
-        </div>
-      )}
+    <div className="space-y-6">
+      <FormSection title="Engine">
+        <SliderRow
+          label="Analysis depth"
+          hint="Depth used for the full-game pass. Higher is more accurate and slower."
+          value={settings.engine.depth}
+          min={ENGINE_LIMITS.depth.min}
+          max={ENGINE_LIMITS.depth.max}
+          onChange={(depth) => {
+            settings.updateEngine({ depth });
+            onConfigChange?.();
+          }}
+        />
+        <SliderRow
+          label="Live depth"
+          hint="Depth for the position you are looking at right now."
+          value={settings.engine.liveDepth}
+          min={ENGINE_LIMITS.liveDepth.min}
+          max={ENGINE_LIMITS.liveDepth.max}
+          onChange={(liveDepth) => settings.updateEngine({ liveDepth })}
+        />
+        <SliderRow
+          label="Parallel searches"
+          hint={`Positions reviewed at once. Up to ${parallelism()} on this device.`}
+          value={settings.engine.threads}
+          min={1}
+          max={parallelism()}
+          onChange={(threads) => settings.updateEngine({ threads })}
+        />
+        <SliderRow
+          label="Hash"
+          hint="Total transposition table, shared out across the parallel searches."
+          value={settings.engine.hash}
+          min={ENGINE_LIMITS.hash.min}
+          max={ENGINE_LIMITS.hash.max}
+          step={16}
+          format={(v) => `${v} MB`}
+          onChange={(hash) => settings.updateEngine({ hash })}
+        />
+        <SliderRow
+          label="Time per move"
+          hint="0 means search to the target depth with no time cap."
+          value={settings.engine.moveTimeMs}
+          min={ENGINE_LIMITS.moveTimeMs.min}
+          max={ENGINE_LIMITS.moveTimeMs.max}
+          step={100}
+          format={(v) => (v === 0 ? 'No cap' : `${v} ms`)}
+          onChange={(moveTimeMs) => {
+            settings.updateEngine({ moveTimeMs });
+            onConfigChange?.();
+          }}
+        />
+        <SliderRow
+          label="Lines (MultiPV)"
+          hint="Alternative lines to calculate. 2 or more enables sharper brilliant-move detection."
+          value={settings.engine.multiPv}
+          min={ENGINE_LIMITS.multiPv.min}
+          max={ENGINE_LIMITS.multiPv.max}
+          onChange={(multiPv) => {
+            settings.updateEngine({ multiPv });
+            onConfigChange?.();
+          }}
+        />
+        <SwitchRow
+          label="Quick first pass"
+          hint={`A complete review in about ${Math.round(QUICK_PASS_BUDGET_MS / 1000)}s, then refined at the depth above. Off: nothing appears until the full pass finishes.`}
+          checked={settings.engine.quickPass}
+          onChange={(quickPass) => settings.updateEngine({ quickPass })}
+        />
+        <SwitchRow
+          label="Analyse automatically"
+          checked={settings.autoAnalyse}
+          onChange={(autoAnalyse) => settings.update({ autoAnalyse })}
+        />
+      </FormSection>
 
-      {section('thresholds', 'Move classification')}
-      {open === 'thresholds' && (
-        <div className="space-y-3 px-4 py-3">
-          <p className="text-muted text-[11px] leading-relaxed">
-            Thresholds are in <strong>expected points</strong> given away, not pawns — so the same
-            evaluation drop counts for more in a close game than in a decided one. The defaults are
-            tuned to match how Chess.com labels the same game.
-          </p>
-          <Slider
-            label="Inaccuracy at"
-            value={settings.thresholds.inaccuracy}
-            min={1}
-            max={15}
-            step={0.5}
-            format={(v) => `${v.toFixed(1)} pts`}
-            onChange={(inaccuracy) => {
-              settings.updateThresholds({ inaccuracy });
-              onConfigChange?.();
-            }}
-          />
-          <Slider
-            label="Mistake at"
-            value={settings.thresholds.mistake}
-            min={5}
-            max={25}
-            step={0.5}
-            format={(v) => `${v.toFixed(1)} pts`}
-            onChange={(mistake) => {
-              settings.updateThresholds({ mistake });
-              onConfigChange?.();
-            }}
-          />
-          <Slider
-            label="Blunder at"
-            value={settings.thresholds.blunder}
-            min={10}
-            max={45}
-            step={1}
-            format={(v) => `${v.toFixed(0)} pts`}
-            onChange={(blunder) => {
-              settings.updateThresholds({ blunder });
-              onConfigChange?.();
-            }}
-          />
-          <Slider
-            label="Miss at"
-            hint="Expected points thrown away from a winning position before a move counts as a miss."
-            value={settings.thresholds.missedWin}
-            min={5}
-            max={30}
-            step={1}
-            format={(v) => `${v.toFixed(0)} pts`}
-            onChange={(missedWin) => {
-              settings.updateThresholds({ missedWin });
-              onConfigChange?.();
-            }}
-          />
-          <Slider
-            label="Brilliant sacrifice"
-            hint="Minimum material given up for a move to qualify as brilliant."
-            value={settings.thresholds.brilliantSacrifice}
-            min={0.5}
-            max={5}
-            step={0.25}
-            format={(v) => v.toFixed(2)}
-            onChange={(brilliantSacrifice) => {
-              settings.updateThresholds({ brilliantSacrifice });
-              onConfigChange?.();
-            }}
-          />
-          <Slider
-            label="Book depth (plies)"
-            value={settings.thresholds.bookDepth}
-            min={0}
-            max={30}
-            onChange={(bookDepth) => {
-              settings.updateThresholds({ bookDepth });
-              onConfigChange?.();
-            }}
-          />
-          <button type="button" className="btn btn-ghost w-full" onClick={settings.reset}>
-            Reset all settings
-          </button>
-        </div>
-      )}
+      <FormSection
+        title="Move classification"
+        footer={
+          <>
+            Thresholds are in expected points given away, not pawns — so the same evaluation drop
+            counts for more in a close game than in a decided one. The defaults are tuned to match how
+            Chess.com labels the same game.
+          </>
+        }
+      >
+        <SliderRow
+          label="Inaccuracy at"
+          value={settings.thresholds.inaccuracy}
+          min={1}
+          max={15}
+          step={0.5}
+          format={(v) => `${v.toFixed(1)} pts`}
+          onChange={(inaccuracy) => {
+            settings.updateThresholds({ inaccuracy });
+            onConfigChange?.();
+          }}
+        />
+        <SliderRow
+          label="Mistake at"
+          value={settings.thresholds.mistake}
+          min={5}
+          max={25}
+          step={0.5}
+          format={(v) => `${v.toFixed(1)} pts`}
+          onChange={(mistake) => {
+            settings.updateThresholds({ mistake });
+            onConfigChange?.();
+          }}
+        />
+        <SliderRow
+          label="Blunder at"
+          value={settings.thresholds.blunder}
+          min={10}
+          max={45}
+          step={1}
+          format={(v) => `${v.toFixed(0)} pts`}
+          onChange={(blunder) => {
+            settings.updateThresholds({ blunder });
+            onConfigChange?.();
+          }}
+        />
+        <SliderRow
+          label="Miss at"
+          hint="Expected points thrown away from a winning position before a move counts as a miss."
+          value={settings.thresholds.missedWin}
+          min={5}
+          max={30}
+          step={1}
+          format={(v) => `${v.toFixed(0)} pts`}
+          onChange={(missedWin) => {
+            settings.updateThresholds({ missedWin });
+            onConfigChange?.();
+          }}
+        />
+        <SliderRow
+          label="Brilliant sacrifice"
+          hint="Minimum material given up for a move to qualify as brilliant."
+          value={settings.thresholds.brilliantSacrifice}
+          min={0.5}
+          max={5}
+          step={0.25}
+          format={(v) => v.toFixed(2)}
+          onChange={(brilliantSacrifice) => {
+            settings.updateThresholds({ brilliantSacrifice });
+            onConfigChange?.();
+          }}
+        />
+        <SliderRow
+          label="Book depth"
+          value={settings.thresholds.bookDepth}
+          min={0}
+          max={30}
+          format={(v) => `${v} plies`}
+          onChange={(bookDepth) => {
+            settings.updateThresholds({ bookDepth });
+            onConfigChange?.();
+          }}
+        />
+      </FormSection>
 
-      {section('board', 'Board')}
-      {open === 'board' && (
-        <div className="space-y-3 px-4 py-3">
-          <div>
-            <p className="mb-1.5 text-xs font-medium">Theme</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(['classic', 'slate', 'walnut', 'ocean'] as BoardTheme[]).map((theme) => (
+      <FormSection title="Board">
+        <div className="cell flex-col items-stretch gap-2.5 py-3">
+          <span className="text-[15px]">Theme</span>
+          <div className="grid max-w-[24rem] grid-cols-4 gap-2.5" role="radiogroup" aria-label="Board theme">
+            {BOARD_THEMES.map(({ key, label }) => {
+              const selected = settings.boardTheme === key;
+              return (
                 <button
-                  key={theme}
+                  key={key}
                   type="button"
-                  onClick={() => settings.update({ boardTheme: theme })}
-                  data-board={theme}
-                  className={cn(
-                    'flex h-9 overflow-hidden rounded-md border-2 transition-colors',
-                    settings.boardTheme === theme ? 'border-brand-500' : 'border-transparent',
-                  )}
-                  title={theme}
-                  aria-label={`${theme} board theme`}
+                  role="radio"
+                  aria-checked={selected}
+                  data-board={key}
+                  onClick={() => settings.update({ boardTheme: key })}
+                  className="flex min-w-0 cursor-pointer flex-col items-center gap-1.5"
                 >
-                  <span className="flex-1" style={{ background: 'var(--board-light)' }} />
-                  <span className="flex-1" style={{ background: 'var(--board-dark)' }} />
+                  <span
+                    className={cn(
+                      'relative grid aspect-[4/3] w-full grid-cols-2 grid-rows-2 overflow-hidden rounded-[10px] transition-shadow',
+                      selected
+                        ? 'shadow-[0_0_0_2px_var(--surface-panel),0_0_0_4px_var(--tint)]'
+                        : 'shadow-[0_0_0_1px_var(--border-subtle)]',
+                    )}
+                    aria-hidden="true"
+                  >
+                    <span style={{ background: 'var(--board-light)' }} />
+                    <span style={{ background: 'var(--board-dark)' }} />
+                    <span style={{ background: 'var(--board-dark)' }} />
+                    <span style={{ background: 'var(--board-light)' }} />
+                    {selected && (
+                      <span className="bg-brand-500 absolute right-1 bottom-1 flex h-4.5 w-4.5 items-center justify-center rounded-full text-white">
+                        <CheckIcon size={11} strokeWidth={3} />
+                      </span>
+                    )}
+                  </span>
+                  <span className={cn('text-[12px]', selected ? 'text-accent font-semibold' : 'text-muted')}>
+                    {label}
+                  </span>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
-          <Toggle
-            label="Coordinates"
-            checked={settings.showCoordinates}
-            onChange={(showCoordinates) => settings.update({ showCoordinates })}
-          />
-          <Toggle
-            label="Best-move arrow"
-            checked={settings.showBestMoveArrow}
-            onChange={(showBestMoveArrow) => settings.update({ showBestMoveArrow })}
-          />
-          <Toggle
-            label="Animations"
-            checked={settings.animations}
-            onChange={(animations) => settings.update({ animations })}
-          />
         </div>
-      )}
+        <SwitchRow
+          label="Coordinates"
+          checked={settings.showCoordinates}
+          onChange={(showCoordinates) => settings.update({ showCoordinates })}
+        />
+        <SwitchRow
+          label="Best-move arrow"
+          checked={settings.showBestMoveArrow}
+          onChange={(showBestMoveArrow) => settings.update({ showBestMoveArrow })}
+        />
+        <SwitchRow
+          label="Animations"
+          checked={settings.animations}
+          onChange={(animations) => settings.update({ animations })}
+        />
+      </FormSection>
+
+      <div className="list-group">
+        <button type="button" className="cell text-danger justify-center text-[15px]" onClick={settings.reset}>
+          Reset All Settings
+        </button>
+      </div>
     </div>
   );
 }
 
-function Slider({
+function SliderRow({
   label,
   hint,
   value,
@@ -259,15 +276,20 @@ function Slider({
   format?: (value: number) => string;
   onChange: (value: number) => void;
 }) {
+  // The tint runs to the knob's centre, which travels the track less its own width.
+  const ratio = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0;
+  const fill = { '--fill': `calc(14px + (100% - 28px) * ${ratio})` } as CSSProperties;
+
   return (
-    <label className={cn('block', disabled && 'opacity-55')}>
-      <span className="flex items-center justify-between text-xs font-medium">
+    <label className={cn('cell flex-col items-stretch gap-1 py-3', disabled && 'opacity-55')}>
+      <span className="flex items-center justify-between gap-3 text-[15px]">
         {label}
-        <span className="text-muted font-mono tabular-nums">{format ? format(value) : value}</span>
+        <span className="text-muted tabular-nums">{format ? format(value) : value}</span>
       </span>
       <input
         type="range"
-        className="accent-brand-500 mt-1.5 w-full"
+        className="slider"
+        style={fill}
         min={min}
         max={max}
         step={step}
@@ -275,45 +297,29 @@ function Slider({
         disabled={disabled}
         onChange={(event) => onChange(Number(event.target.value))}
       />
-      {hint && <span className="text-muted mt-0.5 block text-[11px] leading-snug">{hint}</span>}
+      {hint && <span className="text-muted block text-[13px] leading-snug">{hint}</span>}
     </label>
   );
 }
 
-function Toggle({
+function SwitchRow({
   label,
   hint,
   checked,
   onChange,
 }: {
   label: string;
-  hint?: string;
+  hint?: ReactNode;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="block cursor-pointer">
-      <span className="flex items-center justify-between gap-3 text-xs font-medium">
-        {label}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          onClick={() => onChange(!checked)}
-          className={cn(
-            'is-pill relative h-5 w-9 shrink-0 transition-colors',
-            checked ? 'bg-brand-500' : 'bg-[var(--surface-sunken)] ring-1 ring-[var(--border-strong)] ring-inset',
-          )}
-        >
-          <span
-            className={cn(
-              'is-pill absolute top-0.5 h-4 w-4 bg-white shadow transition-[left]',
-              checked ? 'left-[1.125rem]' : 'left-0.5',
-            )}
-          />
-        </button>
+    <div className="cell">
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px]">{label}</span>
+        {hint && <span className="text-muted mt-0.5 block text-[13px] leading-snug">{hint}</span>}
       </span>
-      {hint && <span className="text-muted mt-0.5 block text-[11px] leading-snug">{hint}</span>}
-    </label>
+      <Switch checked={checked} onChange={onChange} label={label} />
+    </div>
   );
 }

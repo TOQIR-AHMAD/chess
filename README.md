@@ -30,7 +30,8 @@ move-by-move classification and an accuracy report.
 | 🎯 **Accuracy report** | Both sides, with a move-quality breakdown |
 | 📖 **Opening detection** | Matched *by position*, so transpositions still resolve |
 | ⌨️ **Keyboard driven** | `←` `→` move · `Home`/`End` · `Space` play · `F` flip |
-| 🌗 **Light & dark** | Four board themes; the board stays a board in both |
+| 📱 **iOS design** | Grouped lists, glass bars and iOS controls, with the same sidebar and layout on every screen |
+| 🌗 **Light & dark** | Light, dark or automatic; four board themes, and the board stays a board in both |
 
 ---
 

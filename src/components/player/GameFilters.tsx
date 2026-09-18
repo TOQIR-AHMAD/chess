@@ -1,15 +1,15 @@
 import type { TimeClass } from '@/types/chesscom';
 import type { GameFilterState } from '@/types/player';
 import { EMPTY_FILTERS, hasActiveFilters } from '@/services/gameService';
-import { CloseIcon, SearchIcon } from '@/components/ui/Icons';
-import { cn } from '@/utils/cn';
+import { SegmentedControl } from '@/components/ui/Controls';
+import { SearchIcon } from '@/components/ui/Icons';
 
-const TIME_CLASSES: Array<{ key: TimeClass | 'all'; label: string }> = [
-  { key: 'all', label: 'All' },
-  { key: 'blitz', label: 'Blitz' },
-  { key: 'rapid', label: 'Rapid' },
-  { key: 'bullet', label: 'Bullet' },
-  { key: 'daily', label: 'Daily' },
+const TIME_CLASSES: Array<{ value: TimeClass | 'all'; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'blitz', label: 'Blitz' },
+  { value: 'rapid', label: 'Rapid' },
+  { value: 'bullet', label: 'Bullet' },
+  { value: 'daily', label: 'Daily' },
 ];
 
 const RESULTS: Array<{ key: GameFilterState['result']; label: string }> = [
@@ -25,7 +25,10 @@ const COLORS: Array<{ key: GameFilterState['color']; label: string }> = [
   { key: 'black', label: 'As Black' },
 ];
 
-/** Filter bar above the game history. */
+/**
+ * Filter bar above the game history: the time control as a segmented control,
+ * then a search field and pop-up menus for the rest.
+ */
 export function GameFilters({
   filters,
   onChange,
@@ -42,49 +45,39 @@ export function GameFilters({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        {TIME_CLASSES.map((entry) => (
-          <button
-            key={entry.key}
-            type="button"
-            onClick={() => set('timeClass', entry.key)}
-            className={cn(
-              'btn h-8 px-3 text-xs',
-              filters.timeClass === entry.key ? 'btn-primary' : 'btn-ghost',
-            )}
-          >
-            {entry.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <SegmentedControl
+          label="Time control"
+          className="w-full @xl:w-auto @xl:min-w-[22rem]"
+          options={TIME_CLASSES}
+          value={filters.timeClass}
+          onChange={(timeClass) => set('timeClass', timeClass)}
+        />
 
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-muted text-xs tabular-nums">
+          <span className="text-muted text-[13px] tabular-nums">
             {resultCount === totalCount
               ? `${totalCount} loaded`
               : `${resultCount} of ${totalCount} loaded`}
           </span>
           {hasActiveFilters(filters) && (
-            <button
-              type="button"
-              className="btn btn-ghost h-8 px-2.5 text-xs"
-              onClick={() => onChange(EMPTY_FILTERS)}
-            >
-              <CloseIcon size={13} />
+            <button type="button" className="btn btn-ghost h-8 px-2.5 text-[14px]" onClick={() => onChange(EMPTY_FILTERS)}>
               Clear
             </button>
           )}
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 @xl:grid-cols-2 @5xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.7fr)]">
         <div className="relative min-w-0">
-          <SearchIcon size={15} className="text-muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2" />
+          <SearchIcon size={16} className="text-muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" />
           <input
-            className="input pl-8"
-            placeholder="Search opponent, opening, event…"
+            className="input pl-9"
+            placeholder="Opponent, opening, event"
             value={filters.query}
             onChange={(event) => set('query', event.target.value)}
             aria-label="Search games"
+            enterKeyHint="search"
           />
         </div>
 
@@ -123,7 +116,7 @@ export function GameFilters({
             onChange={(event) => set('from', event.target.value || null)}
             aria-label="From date"
           />
-          <span className="text-muted text-xs">–</span>
+          <span className="text-muted text-[13px]">–</span>
           <input
             type="date"
             className="input min-w-0"

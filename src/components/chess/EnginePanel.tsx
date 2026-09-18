@@ -34,10 +34,10 @@ export function EnginePanel({
 
   if (live.status.state === 'error') {
     return (
-      <div className={cn('px-4 py-4 text-sm', className)}>
-        <p className="text-danger font-medium">The engine could not start</p>
-        <p className="text-secondary mt-1 text-xs">{live.status.error}</p>
-        <p className="text-muted mt-2 text-xs">
+      <div className={cn('px-4 py-4', className)}>
+        <p className="text-danger text-[15px] font-semibold">The engine could not start</p>
+        <p className="text-secondary mt-1 text-[13px]">{live.status.error}</p>
+        <p className="text-muted mt-2 text-[13px]">
           Move navigation, the move list and the game details all still work — only the evaluation is
           unavailable.
         </p>
@@ -48,52 +48,50 @@ export function EnginePanel({
   if (live.terminal) {
     return (
       <div className={cn('px-4 py-4', className)}>
-        <p className="text-sm font-semibold">
+        <p className="text-[15px] font-semibold">
           {live.terminal === 'checkmate' ? 'Checkmate' : live.terminal === 'stalemate' ? 'Stalemate' : 'Drawn position'}
         </p>
-        <p className="text-secondary mt-1 text-xs">The game is over in this position — nothing left to search.</p>
+        <p className="text-muted mt-1 text-[13px]">The game is over in this position — nothing left to search.</p>
       </div>
     );
   }
 
   return (
-    <div className={cn('flex flex-col gap-3 px-4 py-3', className)}>
+    <div className={cn('flex flex-col gap-3 px-4 py-3.5', className)}>
       <div className="flex items-center gap-3">
-        <span className="text-accent surface-raised flex h-8 w-8 items-center justify-center rounded-lg">
-          <CpuIcon size={16} />
+        <span className="cell-icon bg-[linear-gradient(180deg,#8e8e93_0%,#636366_100%)]">
+          <CpuIcon size={17} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{live.status.name}</p>
-          <p className="text-muted flex items-center gap-2 text-[11px]">
+          <p className="truncate text-[15px] font-semibold">{live.status.name}</p>
+          <p className="text-muted flex items-center gap-2 text-[12px] tabular-nums">
             <span>Depth {live.depth || '—'}</span>
             {top?.nodes ? <span>{formatCompactNumber(top.nodes)} nodes</span> : null}
             {live.status.poolSize > 1 && <span>{live.status.poolSize} engines</span>}
           </p>
         </div>
         <div className="text-right">
-          <p className={cn('font-mono text-lg leading-none font-bold tabular-nums', evalTone(score?.value, score?.type))}>
+          <p className={cn('text-[20px] leading-none font-bold tabular-nums', evalTone(score?.value, score?.type))}>
             {score ? formatEval(score) : '—'}
           </p>
           {live.running && (
-            <span className="text-muted mt-1 inline-flex items-center gap-1 text-[10px]">
-              <Spinner size={10} /> searching
+            <span className="text-muted mt-1 inline-flex items-center gap-1 text-[11px]">
+              <Spinner size={11} /> searching
             </span>
           )}
         </div>
       </div>
 
       {live.status.state === 'loading' && live.status.downloadPercent !== null && (
-        <p className="text-muted text-xs">Downloading engine — {live.status.downloadPercent}%</p>
+        <p className="text-muted text-[13px]">Downloading engine — {live.status.downloadPercent}%</p>
       )}
 
-      <ol className="space-y-1">
+      <ol className="-mx-1.5 space-y-0.5">
         {live.lines.slice(0, 3).map((line) => (
           <EngineLine key={line.multipv} fen={fen} line={line} onPlay={onPlayLine} onStep={onStepLine} />
         ))}
         {live.lines.length === 0 && (
-          <li className="text-muted py-2 text-xs">
-            {live.running ? 'Calculating…' : 'No lines yet.'}
-          </li>
+          <li className="text-muted px-1.5 py-2 text-[13px]">{live.running ? 'Calculating…' : 'No lines yet.'}</li>
         )}
       </ol>
     </div>
@@ -120,33 +118,33 @@ function EngineLine({
   const mateIn = line.score.type === 'mate' && line.score.value !== 0 ? Math.abs(line.score.value) : null;
 
   return (
-    <li className="flex items-start gap-1">
+    <li className="flex items-center gap-1">
       <button
         type="button"
         onClick={() => onPlay?.(line.pv)}
         disabled={!onPlay || line.pv.length === 0}
         className={cn(
-          'group flex min-w-0 flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors',
-          onPlay ? 'hover:bg-[var(--surface-hover)]' : 'cursor-default',
+          'group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors',
+          onPlay ? 'hover:bg-[var(--fill-4)]' : 'cursor-default',
         )}
         title={onPlay ? 'Play this line out on the board' : undefined}
       >
         <span
           className={cn(
-            'surface-raised mt-px shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums',
+            'min-w-[3.25rem] shrink-0 rounded-md bg-[var(--fill-3)] px-1.5 py-0.5 text-center text-[12px] font-bold tabular-nums',
             evalTone(score.value, score.type),
           )}
         >
           {formatEval(score)}
         </span>
-        <span className="text-secondary min-w-0 flex-1 truncate font-mono text-xs">{text || '—'}</span>
+        <span className="text-secondary min-w-0 flex-1 truncate text-[13px] tabular-nums">{text || '—'}</span>
       </button>
 
       {onStep && mateIn !== null && line.pv.length > 0 && (
         <button
           type="button"
           onClick={() => onStep(line.pv)}
-          className="btn btn-ghost mt-px h-6 shrink-0 px-2 text-[11px] whitespace-nowrap"
+          className="btn btn-subtle h-7 min-h-0 shrink-0 px-2.5 text-[12px]"
           title={`Walk through the mate in ${mateIn}, one move at a time`}
         >
           Step mate

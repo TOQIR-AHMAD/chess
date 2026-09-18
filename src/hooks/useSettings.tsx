@@ -3,9 +3,17 @@ import type { ClassificationThresholds, EngineConfig } from '@/types/analysis';
 import { DEFAULT_THRESHOLDS } from '@/services/classification';
 import { DEFAULT_ENGINE_CONFIG, sanitiseEngineConfig } from '@/services/stockfish';
 import { useLocalStorage } from './useLocalStorage';
+import { useMediaQuery } from './useMediaQuery';
 
 export type BoardTheme = 'classic' | 'slate' | 'walnut' | 'ocean';
-export type ThemeMode = 'dark' | 'light';
+/** `system` follows the device's appearance; light is the default, so every screen starts alike. */
+export type ThemeMode = 'system' | 'dark' | 'light';
+export type ResolvedTheme = 'dark' | 'light';
+
+const THEME_MODES: ThemeMode[] = ['system', 'dark', 'light'];
+
+/** The bar colour the browser paints around the page, per appearance. */
+const THEME_COLOR: Record<ResolvedTheme, string> = { light: '#f2f2f7', dark: '#000000' };
 
 /**
  * Bumped when the *meaning* of the scoring settings changes, not merely their
@@ -43,6 +51,8 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 interface SettingsContextValue extends Settings {
+  /** The appearance actually on screen once `system` is resolved against the device. */
+  resolvedTheme: ResolvedTheme;
   update: (patch: Partial<Settings>) => void;
   updateEngine: (patch: Partial<EngineConfig>) => void;
   updateThresholds: (patch: Partial<ClassificationThresholds>) => void;
@@ -52,10 +62,15 @@ interface SettingsContextValue extends Settings {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
-/** Read the theme the pre-paint script in index.html settled on. */
+/** Read the appearance the pre-paint script in index.html worked from. */
 function initialTheme(): ThemeMode {
-  if (typeof document === 'undefined') return 'light';
-  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  try {
+    const stored = window.localStorage.getItem('gambit:theme');
+    if (THEME_MODES.includes(stored as ThemeMode)) return stored as ThemeMode;
+  } catch {
+    // Storage unavailable — fall through to the default.
+  }
+  return 'light';
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -63,6 +78,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     ...DEFAULT_SETTINGS,
     theme: initialTheme(),
   });
+  const systemDark = useMediaQuery('(prefers-color-scheme: dark)');
 
   // Merge with defaults so a settings object written by an older build still works.
   const settings = useMemo<Settings>(() => {
@@ -70,6 +86,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return {
       ...DEFAULT_SETTINGS,
       ...stored,
+      theme: THEME_MODES.includes(stored.theme) ? stored.theme : DEFAULT_SETTINGS.theme,
       scoringVersion: SCORING_SETTINGS_VERSION,
       engine: scoringIsCurrent
         ? sanitiseEngineConfig({ ...DEFAULT_ENGINE_CONFIG, ...stored.engine })
@@ -80,14 +97,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     };
   }, [stored]);
 
+  const resolvedTheme: ResolvedTheme =
+    settings.theme === 'system' ? (systemDark ? 'dark' : 'light') : settings.theme;
+
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+    document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[resolvedTheme]);
     try {
       window.localStorage.setItem('gambit:theme', settings.theme);
     } catch {
       // Ignore storage failures; the class on <html> is what matters.
     }
-  }, [settings.theme]);
+  }, [resolvedTheme, settings.theme]);
 
   // Every writer starts from the *merged* settings, never from the raw stored blob.
   // Writing `{ ...stored, ...patch }` would resurrect values that the version check
@@ -111,14 +132,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const reset = useCallback(() => setStored({ ...DEFAULT_SETTINGS, theme: settings.theme }), [setStored, settings.theme]);
 
+  // The quick switch in the bar always lands on an explicit appearance: the
+  // opposite of whatever is on screen, even when that came from the device.
   const toggleTheme = useCallback(
-    () => setStored({ ...settings, theme: settings.theme === 'dark' ? 'light' : 'dark' }),
-    [setStored, settings],
+    () => setStored({ ...settings, theme: resolvedTheme === 'dark' ? 'light' : 'dark' }),
+    [resolvedTheme, setStored, settings],
   );
 
   const value = useMemo<SettingsContextValue>(
-    () => ({ ...settings, update, updateEngine, updateThresholds, reset, toggleTheme }),
-    [settings, update, updateEngine, updateThresholds, reset, toggleTheme],
+    () => ({ ...settings, resolvedTheme, update, updateEngine, updateThresholds, reset, toggleTheme }),
+    [settings, resolvedTheme, update, updateEngine, updateThresholds, reset, toggleTheme],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

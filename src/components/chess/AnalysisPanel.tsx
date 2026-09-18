@@ -29,10 +29,8 @@ export function AnalysisPanel({
     if (!analysing) return null;
     return (
       <div className={cn('px-4 py-6 text-center', className)}>
-        <p className="text-secondary text-sm">Analysing the game…</p>
-        <p className="text-muted mt-1 text-xs">
-          Move quality appears here as each position is evaluated.
-        </p>
+        <p className="text-[15px] font-semibold">Analysing the game…</p>
+        <p className="text-muted mt-1 text-[13px]">Move quality appears here as each position is evaluated.</p>
       </div>
     );
   }
@@ -43,48 +41,48 @@ export function AnalysisPanel({
   const isEngineChoice = move.isTopEngineMove;
 
   return (
-    <div className={cn('animate-fade-in space-y-3 px-4 py-3', className)}>
+    <div className={cn('animate-fade-in space-y-2.5 px-4 py-3', className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-muted text-[11px] font-semibold tracking-wide uppercase">
+          <p className="text-muted text-[13px]">
             Move {move.moveNumber} · {playedByLabel}
           </p>
-          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-xl font-bold">
-            <ClassificationIcon classification={move.classification} size={22} />
+          <p className="mt-0.5 flex items-center gap-2 text-[22px] leading-tight font-bold tracking-[-0.02em] tabular-nums">
+            <ClassificationIcon classification={move.classification} size={24} />
             {move.san}
           </p>
         </div>
-        <span className={cn('chip ring-1', meta.badge)}>{meta.label}</span>
+        <span className={cn('chip mt-0.5', meta.badge)}>{meta.label}</span>
       </div>
 
-      <div className="surface-sunken flex items-center justify-between rounded-lg px-3 py-2">
-        <div className="flex items-center gap-2 font-mono text-sm tabular-nums">
+      <div className="flex items-center justify-between rounded-xl bg-[var(--fill-4)] px-3 py-2">
+        <div className="flex items-center gap-2 text-[15px] tabular-nums">
           <span className="text-secondary">{formatEval(move.evalBefore)}</span>
           <span className="text-muted">→</span>
           <span className="font-semibold">{formatEval(move.evalAfter)}</span>
         </div>
         <div className="text-right">
-          <p className="text-muted text-[10px] tracking-wide uppercase">Accuracy</p>
-          <p className="font-mono text-sm font-semibold tabular-nums">{move.accuracy.toFixed(0)}%</p>
+          <p className="text-muted text-[11px]">Accuracy</p>
+          <p className="text-[15px] leading-tight font-semibold tabular-nums">{move.accuracy.toFixed(0)}%</p>
         </div>
       </div>
 
-      <p className="text-secondary text-sm leading-relaxed">{move.explanation}</p>
+      <p className="text-secondary text-[14px] leading-relaxed">{move.explanation}</p>
 
       {!isEngineChoice && move.bestMoveSan && (
-        <div className="surface-raised rounded-lg px-3 py-2">
+        <div className="bg-accent-soft rounded-xl px-3 py-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-muted text-[10px] font-semibold tracking-wide uppercase">Best move</span>
-            <span className="text-accent font-mono text-sm font-bold">{move.bestMoveSan}</span>
+            <span className="text-accent text-[12px] font-semibold">Best move</span>
+            <span className="text-accent text-[15px] font-bold tabular-nums">{move.bestMoveSan}</span>
           </div>
-          {bestLine && <p className="text-secondary mt-1.5 font-mono text-xs leading-relaxed">{bestLine}</p>}
+          {bestLine && <p className="text-secondary mt-1 text-[13px] leading-relaxed tabular-nums">{bestLine}</p>}
         </div>
       )}
 
       {isEngineChoice && bestLine && (
-        <div className="surface-raised rounded-lg px-3 py-2">
-          <span className="text-muted text-[10px] font-semibold tracking-wide uppercase">Engine line</span>
-          <p className="text-secondary mt-1 font-mono text-xs leading-relaxed">{bestLine}</p>
+        <div className="rounded-xl bg-[var(--fill-4)] px-3 py-2">
+          <span className="text-muted text-[12px] font-semibold">Engine line</span>
+          <p className="text-secondary mt-0.5 text-[13px] leading-relaxed tabular-nums">{bestLine}</p>
         </div>
       )}
 
@@ -99,10 +97,11 @@ export function AnalysisPanel({
 
 function Stat({ label, value, suffix }: { label: string; value: string; suffix: string }) {
   return (
-    <div className="surface-sunken rounded-lg px-2 py-1.5">
-      <dt className="text-muted text-[10px] tracking-wide uppercase">{label}</dt>
-      <dd className="font-mono text-sm font-semibold tabular-nums">{value}</dd>
-      <dd className="text-muted text-[10px]">{suffix}</dd>
+    <div className="rounded-xl bg-[var(--fill-4)] px-2 py-1.5">
+      <dt className="text-muted text-[11px]">{label}</dt>
+      <dd className="text-[15px] leading-tight font-semibold tabular-nums">
+        {value} <span className="text-muted text-[11px] font-normal">{suffix}</span>
+      </dd>
     </div>
   );
 }
